@@ -1,0 +1,37 @@
+# Runs at the root of the public mirror repo (peppol-sh/peppol-sh-ts) after the
+# subtree split. Inert inside the monorepo, which has its own CI workflow.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # No --frozen-lockfile: the mirror carries no bun.lock (the lockfile lives
+      # at the monorepo root and is not part of the subtree split).
+      - name: Install dependencies
+        run: bun install
+
+      # --config-path is required: biome silently drops a `root: false` config
+      # when it is discovered implicitly. See the comment in biome.jsonc.
+      - name: Lint
+        run: bunx biome check --config-path=biome.jsonc .
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Test
+        run: bun run test
+
+      - name: Build
+        run: bun run build

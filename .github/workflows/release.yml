@@ -1,0 +1,43 @@
+# Runs at the root of the public mirror repo (peppol-sh/peppol-sh-ts).
+# Publishing happens here, tag-triggered, so releases are auditable where the
+# community looks (ADR-0022).
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  id-token: write # required for npm provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      # No --frozen-lockfile: the mirror carries no bun.lock (the lockfile lives
+      # at the monorepo root and is not part of the subtree split).
+      - name: Install dependencies
+        run: bun install
+
+      - name: Test
+        run: bun run test
+
+      - name: Build
+        run: bun run build
+
+      - name: Publish to npm
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

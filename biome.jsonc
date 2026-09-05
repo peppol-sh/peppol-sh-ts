@@ -1,0 +1,39 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.4/schema.json",
+  // `root: false` keeps the monorepo's root `biome check .` working — a nested
+  // root config breaks it. The trade-off: Biome silently drops a non-root
+  // config it discovered implicitly, so a bare `biome check .` run from this
+  // directory would lint with Biome's defaults instead. The package's `lint`
+  // script and its CI step therefore name the config explicitly with
+  // `--config-path`, which works standalone (public mirror repo) and inside
+  // the monorepo alike. The file is `.jsonc` only so these comments parse.
+  "root": false,
+  "files": {
+    // A bare negated directory prunes the whole directory, contents included —
+    // `biome check --write` rewrites a `!dist/**` twin back to `!dist`, so do
+    // not add one.
+    "includes": ["**", "!src/generated", "!dist", "!.tsbuild"]
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "suspicious": {
+        "noExplicitAny": "warn",
+        "noArrayIndexKey": "warn"
+      }
+    }
+  }
+}
