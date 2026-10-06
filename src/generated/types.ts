@@ -781,90 +781,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/showcase": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List published Showcase Listings
-         * @description Every published Listing of the Showcase, oldest publication first.
-         *     A Listing that is not published is not in the list.
-         *
-         *     **Public endpoint** — no API key required, and an API key changes
-         *     nothing.
-         *
-         *     The response is cached at the edge for 5 minutes
-         *     (`Cache-Control: public, max-age=300, s-maxage=300, stale-while-revalidate=60`),
-         *     so a change to a Listing can take 5 minutes to show. A query string is
-         *     not part of the cache key. A cached response does not count against a
-         *     rate limit. Responses that are not in the cache are limited to
-         *     600/hour per IP, for the three Showcase endpoints together. This
-         *     budget is separate from the lookup budget.
-         */
-        get: operations["listShowcaseListings"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/showcase/{slug}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get a published Showcase Listing
-         * @description One published Listing by its slug. A slug that does not exist and a
-         *     Listing that is not published give the same `404`.
-         *
-         *     **Public endpoint** — no API key required. Same rate limit and edge
-         *     cache as `GET /v1/showcase`. A `404` is never cached.
-         */
-        get: operations["getShowcaseListing"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/showcase/{slug}/logo": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get the logo of a published Showcase Listing
-         * @description The logo image of a published Listing. The content type is always one
-         *     of `image/png`, `image/webp` or `image/svg+xml`. The response has
-         *     `X-Content-Type-Options: nosniff` and a `Content-Security-Policy` with
-         *     `sandbox`, so an SVG logo that is opened directly cannot run script.
-         *     Show the logo only through an `<img>` element.
-         *
-         *     **Public endpoint** — no API key required. Same rate limit as
-         *     `GET /v1/showcase`. The response is cached at the edge for 1 hour
-         *     (`Cache-Control: public, max-age=3600`).
-         */
-        get: operations["getShowcaseListingLogo"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/v1/validate": {
         parameters: {
             query?: never;
@@ -1829,39 +1745,6 @@ export interface components {
             has_more?: boolean;
             next_cursor?: string | null;
         };
-        /** @description A published Listing of the Showcase. These are all its fields. */
-        ShowcaseListing: {
-            /** @example Acme Invoicing */
-            product_name: string;
-            /**
-             * @description Unique. Does not change after the first publication.
-             * @example acme-invoicing
-             */
-            slug: string;
-            /**
-             * Format: uri
-             * @example https://acme.example.com
-             */
-            product_url: string;
-            /** @example Invoicing for small teams */
-            tagline: string;
-            /** @description Plain text. */
-            description: string;
-            /** @enum {string} */
-            category: "accounting" | "erp" | "ecommerce" | "billing" | "automation" | "ai_agents" | "saas" | "agency" | "other";
-            /**
-             * @description ISO 3166-1 alpha-2 country code, or `null` when the Listing has no country.
-             * @example BE
-             */
-            country: string | null;
-            /**
-             * Format: uri
-             * @description Absolute URL of `GET /v1/showcase/{slug}/logo`, or `null` when the
-             *     Listing has no logo.
-             * @example https://api.peppol.sh/v1/showcase/acme-invoicing/logo
-             */
-            logo_url: string | null;
-        };
         /**
          * @description Result of a Peppol participant lookup via SMP.
          *     Includes NAPTR resolution details, supported document types, and business card information.
@@ -2275,11 +2158,6 @@ export interface components {
          * @example com_abc123
          */
         CompanyId: string;
-        /**
-         * @description Slug of the Listing (e.g., `acme-invoicing`)
-         * @example acme-invoicing
-         */
-        ShowcaseSlug: string;
         /**
          * @description Unique key that prevents a duplicate send when you retry a request.
          *     It is an alias of the `idempotency_key` body field: send the key in
@@ -4020,113 +3898,6 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorObject"];
                 };
             };
-        };
-    };
-    listShowcaseListings: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The published Listings */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        data: components["schemas"]["ShowcaseListing"][];
-                    };
-                };
-            };
-            429: components["responses"]["RateLimited"];
-        };
-    };
-    getShowcaseListing: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /**
-                 * @description Slug of the Listing (e.g., `acme-invoicing`)
-                 * @example acme-invoicing
-                 */
-                slug: components["parameters"]["ShowcaseSlug"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The Listing */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ShowcaseListing"];
-                };
-            };
-            /** @description No published Listing has this slug */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "type": "not_found",
-                     *         "code": "listing_not_found",
-                     *         "message": "Listing not found",
-                     *         "param": "slug"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ErrorObject"];
-                };
-            };
-            429: components["responses"]["RateLimited"];
-        };
-    };
-    getShowcaseListingLogo: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /**
-                 * @description Slug of the Listing (e.g., `acme-invoicing`)
-                 * @example acme-invoicing
-                 */
-                slug: components["parameters"]["ShowcaseSlug"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The logo image */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "image/png": string;
-                    "image/webp": string;
-                    "image/svg+xml": string;
-                };
-            };
-            /** @description No published Listing has this slug, or the Listing has no logo. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorObject"];
-                };
-            };
-            429: components["responses"]["RateLimited"];
         };
     };
     validateDocument: {
