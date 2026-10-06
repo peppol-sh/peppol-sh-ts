@@ -78,21 +78,21 @@ const invoice = await peppol.documents.send({
   idempotency_key: "acme-INV-2026-001",
 });
 
-console.log(invoice.id, invoice.status, invoice.total);
-// doc_a1b2c3d4 queued 605
+console.log(invoice.id, invoice.status, invoice.url);
+// doc_a1b2c3d4 queued /v1/documents/doc_a1b2c3d4
 ```
 
 Sending is asynchronous. Read the document back for its current status, or
 subscribe to [webhooks](#webhooks) instead of polling.
 
 ```ts
-const current = await peppol.documents.get(invoice.id!, {
+const current = await peppol.documents.get(invoice.id, {
   company_id: companyId,
 });
 console.log(current.status); // queued | sending | delivered | failed
 
-const timeline = await peppol.documents.history(invoice.id!);
-const ubl = await peppol.documents.ubl(invoice.id!); // Send-ready UBL XML
+const timeline = await peppol.documents.history(invoice.id);
+const ubl = await peppol.documents.ubl(invoice.id); // Send-ready UBL XML
 ```
 
 ## Authentication and environments
@@ -237,9 +237,10 @@ Backoff is exponential with jitter, starting at 250 ms and capped at 2 s. A
 
 Pass `idempotency_key` on `documents.send` and a repeated call is safe. The API
 answers `202` when it queues a new send and `200` when it replays an existing
-one; both carry the same document shape, so the SDK returns the same type
-either way and you always get the record that exists. A retried send therefore
-never produces a duplicate invoice on the network.
+one; both carry the same `DocumentAccepted` shape (`id`, `status`, `url`), so
+the SDK returns the same type either way and you always get the `id` of the
+record that exists. A retried send therefore never produces a duplicate invoice
+on the network.
 
 ## API surface
 

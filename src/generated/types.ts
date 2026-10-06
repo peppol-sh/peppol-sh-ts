@@ -4,6 +4,33 @@
  */
 
 export interface paths {
+    "/.well-known/oauth-protected-resource": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Protected-resource metadata
+         * @description Says how to authenticate to the host that you called (RFC 9728). Each
+         *     `401` response points to this document in its `WWW-Authenticate`
+         *     header. No authentication required.
+         *
+         *     The document names no authorization servers, scopes or signing
+         *     algorithms, because there is no OAuth authorization server. The
+         *     credential is an API key in the `Authorization: Bearer` header; get
+         *     one from `POST /v1/signup`.
+         */
+        get: operations["getProtectedResourceMetadata"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/health": {
         parameters: {
             query?: never;
@@ -523,6 +550,9 @@ export interface paths {
          *
          *     - With `ps_test_` keys: delivered via email (sandbox)
          *     - With `ps_live_` keys: delivered via Peppol network (production)
+         *
+         *     To make a retry safe, send an `Idempotency-Key` header (or the
+         *     `idempotency_key` body field, which is the same key).
          */
         post: operations["sendDocument"];
         delete?: never;
@@ -547,6 +577,10 @@ export interface paths {
          *
          *     Each document is processed independently — partial failures are possible.
          *     The response array maps 1:1 to the input array.
+         *
+         *     The `Idempotency-Key` header has no effect here, because one key
+         *     cannot identify many documents. To make a retry safe, set
+         *     `idempotency_key` on each document.
          */
         post: operations["sendDocumentBatch"];
         delete?: never;
@@ -1561,7 +1595,8 @@ export interface components {
             /**
              * @description Unique key to prevent duplicate sends.
              *     If provided, a second request with the same key
-             *     returns the original result.
+             *     returns the original result. On `POST /v1/documents` you can
+             *     send the same key in the `Idempotency-Key` header instead.
              */
             idempotency_key?: string;
             /**
@@ -1717,6 +1752,28 @@ export interface components {
             sent_at?: string | null;
             /** Format: date-time */
             delivered_at?: string | null;
+        };
+        /**
+         * @description A document accepted for async sending. Get the full document at `url`.
+         * @example {
+         *       "id": "doc_abc123",
+         *       "status": "queued",
+         *       "url": "/v1/documents/doc_abc123"
+         *     }
+         */
+        DocumentAccepted: {
+            /** @description peppol.sh document ID (prefixed `doc_`) */
+            id: string;
+            /** @enum {string} */
+            status: "queued";
+            /** @description Relative URL of the document (`/v1/documents/{id}`). */
+            url: string;
+            /**
+             * @description Remaining credit balance. Present only on `POST /v1/documents`
+             *     with a live key, when the balance is below the low-balance
+             *     threshold.
+             */
+            credits_remaining?: number;
         };
         /**
          * @description Delivery status of a document.
@@ -2028,6 +2085,7 @@ export interface components {
          *     | validation_error | `invalid_scheme` | Peppol scheme (EAS) is unknown. |
          *     | validation_error | `batch_too_large` | Batch contains more than 100 documents. |
          *     | validation_error | `mixed_company_ids` | Batch mixes multiple `company_id`s. |
+         *     | validation_error | `idempotency_key_mismatch` | The `Idempotency-Key` header and the `idempotency_key` body field carry different keys. |
          *     | validation_error | `ubl_schema_invalid` | UBL payload failed Zod schema validation (see `details.issues`). |
          *     | validation_error | `ubl_business_rule` | UBL payload failed business rule validation (see `details`). |
          *     | validation_error | `ubl_missing_document_type` | UBL payload has neither `invoiceLine` nor `creditNoteLine`. |
@@ -2069,7 +2127,7 @@ export interface components {
          *     | provider_error | `provider_error` | Upstream provider returned an unexpected error. |
          *     | provider_error | `provider_validation_failed` | Upstream provider rejected the payload (see `details`). |
          *     | provider_error | `smp_error` | SMP or DNS lookup failed. |
-         *     | rate_limit_error | `rate_limited` | Too many requests. |
+         *     | rate_limit_error | `rate_limit_exceeded` | Too many requests. Wait for the `Retry-After` time, then retry. |
          *     | billing_error | `insufficient_credits` | Company does not have enough credits to send the document(s). Purchase more via `POST /v1/billing/checkout`. |
          *     | billing_error | `sandbox_not_allowed` | Billing endpoints (e.g. `POST /v1/billing/checkout`) reject sandbox API keys. |
          *     | internal_error | `internal_error` | Unexpected server error. |
@@ -2123,6 +2181,7 @@ export interface components {
         /** @description Missing or invalid API key (`missing_api_key` or `invalid_api_key`). */
         Unauthenticated: {
             headers: {
+                "WWW-Authenticate": components["headers"]["WWWAuthenticate"];
                 [name: string]: unknown;
             };
             content: {
@@ -2144,6 +2203,7 @@ export interface components {
         /** @description Missing or invalid API key */
         Unauthorized: {
             headers: {
+                "WWW-Authenticate": components["headers"]["WWWAuthenticate"];
                 [name: string]: unknown;
             };
             content: {
@@ -2186,10 +2246,13 @@ export interface components {
                 "application/json": components["schemas"]["ErrorObject"];
             };
         };
-        /** @description Too many requests */
+        /** @description Too many requests. Wait for the number of seconds in `Retry-After`, then retry. */
         RateLimited: {
             headers: {
-                "Retry-After"?: number;
+                "Retry-After": components["headers"]["RetryAfter"];
+                "RateLimit-Limit": components["headers"]["RateLimitLimit"];
+                "RateLimit-Remaining": components["headers"]["RateLimitRemaining"];
+                "RateLimit-Reset": components["headers"]["RateLimitReset"];
                 [name: string]: unknown;
             };
             content: {
@@ -2217,13 +2280,94 @@ export interface components {
          * @example acme-invoicing
          */
         ShowcaseSlug: string;
+        /**
+         * @description Unique key that prevents a duplicate send when you retry a request.
+         *     It is an alias of the `idempotency_key` body field: send the key in
+         *     the header or in the body. A second request with the same key in the
+         *     same workspace returns the `id` of the original document with `200`
+         *     and queues no second send. If you send the two and they are different,
+         *     the response is `400 idempotency_key_mismatch`. An empty header is
+         *     ignored.
+         * @example inv-2026-001-attempt
+         */
+        IdempotencyKey: string;
     };
     requestBodies: never;
-    headers: never;
+    headers: {
+        /**
+         * @description Relative URL of the accepted document (`/v1/documents/{id}`). Poll it for the outcome.
+         * @example /v1/documents/doc_abc123
+         */
+        Location: string;
+        /**
+         * @description Number of seconds to wait before the next request.
+         * @example 42
+         */
+        RetryAfter: number;
+        /**
+         * @description Number of requests allowed in the current window.
+         * @example 120
+         */
+        RateLimitLimit: number;
+        /**
+         * @description Number of requests left in the current window.
+         * @example 0
+         */
+        RateLimitRemaining: number;
+        /**
+         * @description Number of seconds until the current window resets.
+         * @example 42
+         */
+        RateLimitReset: number;
+        /**
+         * @description Bearer challenge. `resource_metadata` is the URL of the
+         *     protected-resource metadata (RFC 9728) of the host that you called.
+         * @example Bearer resource_metadata="https://api.peppol.sh/.well-known/oauth-protected-resource"
+         */
+        WWWAuthenticate: string;
+    };
     pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    getProtectedResourceMetadata: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Protected-resource metadata of this host */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "resource": "https://api.peppol.sh",
+                     *       "bearer_methods_supported": [
+                     *         "header"
+                     *       ],
+                     *       "resource_documentation": "https://peppol.sh/auth.md"
+                     *     }
+                     */
+                    "application/json": {
+                        /**
+                         * Format: uri
+                         * @description Origin of the host that you called.
+                         */
+                        resource: string;
+                        bearer_methods_supported: "header"[];
+                        /** Format: uri */
+                        resource_documentation: string;
+                    };
+                };
+            };
+        };
+    };
     getHealth: {
         parameters: {
             query?: never;
@@ -2463,7 +2607,23 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    /**
+                     * @example {
+                     *       "account_id": "acc_abc123",
+                     *       "workspace_id": "wsp_abc123",
+                     *       "role": "admin"
+                     *     }
+                     */
+                    "application/json": {
+                        /** @description ID of the invited account (prefixed `acc_`). */
+                        account_id: string;
+                        /** @description ID of the workspace (prefixed `wsp_`). */
+                        workspace_id: string;
+                        /** @enum {string} */
+                        role: "owner" | "admin" | "member";
+                    };
+                };
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
@@ -2488,7 +2648,20 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    /**
+                     * @example {
+                     *       "removed": true,
+                     *       "account_id": "acc_abc123"
+                     *     }
+                     */
+                    "application/json": {
+                        /** @constant */
+                        removed: true;
+                        /** @description ID of the removed account (prefixed `acc_`). */
+                        account_id: string;
+                    };
+                };
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
@@ -2520,7 +2693,23 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    /**
+                     * @example {
+                     *       "account_id": "acc_abc123",
+                     *       "role": "admin"
+                     *     }
+                     */
+                    "application/json": {
+                        /** @description ID of the member account (prefixed `acc_`). */
+                        account_id: string;
+                        /**
+                         * @description The new role of the member.
+                         * @enum {string}
+                         */
+                        role: "owner" | "admin" | "member";
+                    };
+                };
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
@@ -2550,7 +2739,20 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    /**
+                     * @example {
+                     *       "transferred": true,
+                     *       "new_owner": "acc_abc123"
+                     *     }
+                     */
+                    "application/json": {
+                        /** @constant */
+                        transferred: true;
+                        /** @description ID of the account that is now an owner (prefixed `acc_`). */
+                        new_owner: string;
+                    };
+                };
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
@@ -2623,6 +2825,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorObject"];
                 };
             };
+            429: components["responses"]["RateLimited"];
         };
     };
     getAccount: {
@@ -2720,7 +2923,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorObject"];
+                };
             };
         };
     };
@@ -3236,7 +3441,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorObject"];
+                };
             };
         };
     };
@@ -3300,7 +3507,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorObject"];
+                };
             };
             401: components["responses"]["Unauthenticated"];
             /** @description Only owners and admins can update */
@@ -3308,14 +3517,18 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorObject"];
+                };
             };
             /** @description Company not found (or you are not a member) */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorObject"];
+                };
             };
             /**
              * @description `provider_update_failed` — a live company's `peppol_id` change could
@@ -3325,7 +3538,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorObject"];
+                };
             };
         };
     };
@@ -3359,14 +3574,28 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorObject"];
+                };
             };
         };
     };
     sendDocument: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description Unique key that prevents a duplicate send when you retry a request.
+                 *     It is an alias of the `idempotency_key` body field: send the key in
+                 *     the header or in the body. A second request with the same key in the
+                 *     same workspace returns the `id` of the original document with `200`
+                 *     and queues no second send. If you send the two and they are different,
+                 *     the response is `400 idempotency_key_mismatch`. An empty header is
+                 *     ignored.
+                 * @example inv-2026-001-attempt
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -3412,28 +3641,33 @@ export interface operations {
         };
         responses: {
             /**
-             * @description Idempotent replay — the same idempotency key (or the same document)
-             *     was already accepted, so the existing record is returned unchanged
-             *     and no second send is queued.
+             * @description Idempotent replay — the same idempotency key was already accepted,
+             *     so the `id` and `url` of the existing document are returned and no
+             *     second send is queued. `status` is always `queued` here; get the
+             *     document at `url` for its current status.
              */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Document"];
+                    "application/json": components["schemas"]["DocumentAccepted"];
                 };
             };
             /**
              * @description Accepted for async sending. The document is persisted and queued;
-             *     poll the document or subscribe to webhooks for the outcome.
+             *     poll the document at the `Location` URL or subscribe to webhooks
+             *     for the outcome. When the remaining balance is below the
+             *     low-balance threshold, the response includes an
+             *     `X-Credits-Remaining` header.
              */
             202: {
                 headers: {
+                    Location: components["headers"]["Location"];
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Document"];
+                    "application/json": components["schemas"]["DocumentAccepted"];
                 };
             };
             400: components["responses"]["BadRequest"];
@@ -3444,7 +3678,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorObject"];
+                };
             };
             422: components["responses"]["ValidationError"];
             429: components["responses"]["RateLimited"];
@@ -3476,10 +3712,13 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": (components["schemas"]["Document"] | components["schemas"]["ErrorObject"])[];
+                    "application/json": (components["schemas"]["DocumentAccepted"] | components["schemas"]["ErrorObject"])[];
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             402: components["responses"]["PaymentRequired"];
+            429: components["responses"]["RateLimited"];
         };
     };
     getDocument: {
@@ -3510,7 +3749,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorObject"];
+                };
             };
             404: components["responses"]["NotFound"];
         };
@@ -3684,14 +3925,18 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorObject"];
+                };
             };
             /** @description Participant not found in SML/SMP */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorObject"];
+                };
             };
             /**
              * @description Rate limit exceeded. Check the `Retry-After` header.
@@ -3699,16 +3944,24 @@ export interface operations {
              */
             429: {
                 headers: {
+                    "Retry-After": components["headers"]["RetryAfter"];
+                    "RateLimit-Limit": components["headers"]["RateLimitLimit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimitRemaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimitReset"];
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorObject"];
+                };
             };
             /** @description SMP or DNS error */
             502: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorObject"];
+                };
             };
         };
     };
@@ -3744,28 +3997,28 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorObject"];
+                };
             };
             /** @description Participant not found (no NAPTR record) */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
-            };
-            /** @description Rate limit exceeded */
-            429: {
-                headers: {
-                    [name: string]: unknown;
+                content: {
+                    "application/json": components["schemas"]["ErrorObject"];
                 };
-                content?: never;
             };
+            429: components["responses"]["RateLimited"];
             /** @description DNS resolution error */
             502: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorObject"];
+                };
             };
         };
     };
@@ -3789,13 +4042,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Rate limit exceeded. Check the `Retry-After` header. */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+            429: components["responses"]["RateLimited"];
         };
     };
     getShowcaseListing: {
@@ -3841,13 +4088,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorObject"];
                 };
             };
-            /** @description Rate limit exceeded. Check the `Retry-After` header. */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+            429: components["responses"]["RateLimited"];
         };
     };
     getShowcaseListingLogo: {
@@ -3885,13 +4126,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorObject"];
                 };
             };
-            /** @description Rate limit exceeded. Check the `Retry-After` header. */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+            429: components["responses"]["RateLimited"];
         };
     };
     validateDocument: {
@@ -4097,7 +4332,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorObject"];
+                };
             };
         };
     };
@@ -4126,7 +4363,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorObject"];
+                };
             };
         };
     };
@@ -4155,7 +4394,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorObject"];
+                };
             };
         };
     };

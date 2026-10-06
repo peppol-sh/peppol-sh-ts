@@ -6,15 +6,20 @@ export type DocumentSendParams =
   paths["/v1/documents"]["post"]["requestBody"]["content"]["application/json"];
 
 /**
- * A sent document with computed totals and delivery status.
+ * A document accepted for async sending: its `id`, its `url`, and the status
+ * `queued`. Read the full {@link Document} with {@link Documents.get}.
  *
  * `POST /v1/documents` answers `202` when it queues a new send and `200` when
  * an idempotent replay returns the record that already exists. Both carry the
  * same schema, so indexing on the union of the two keeps the alias honest.
  */
-export type Document = paths["/v1/documents"]["post"]["responses"][
+export type DocumentAccepted = paths["/v1/documents"]["post"]["responses"][
   | 200
   | 202]["content"]["application/json"];
+
+/** A sent document with computed totals and delivery status. */
+export type Document =
+  paths["/v1/documents/{id}"]["get"]["responses"][200]["content"]["application/json"];
 
 /** Query for `GET /v1/documents/{id}`: the company the document belongs to. */
 export type DocumentGetParams =
@@ -44,8 +49,8 @@ export type DocumentBatchSendParams =
   paths["/v1/documents/batch"]["post"]["requestBody"]["content"]["application/json"];
 
 /**
- * Batch results, one entry per input document. Each entry is either the sent
- * document or the error envelope for that document alone.
+ * Batch results, one entry per input document. Each entry is either the
+ * accepted document or the error envelope for that document alone.
  */
 export type DocumentBatchResult =
   paths["/v1/documents/batch"]["post"]["responses"][202]["content"]["application/json"];
@@ -69,10 +74,10 @@ export class Documents {
   /**
    * `POST /v1/documents` — create and send one document. Answers `202` once
    * the document is queued, or `200` with the existing record when the call
-   * is an idempotent replay; both hand back the same {@link Document}.
+   * is an idempotent replay; both hand back the same {@link DocumentAccepted}.
    */
-  send(params: DocumentSendParams): Promise<Document> {
-    return this.request<Document>({
+  send(params: DocumentSendParams): Promise<DocumentAccepted> {
+    return this.request<DocumentAccepted>({
       method: "POST",
       path: "/v1/documents",
       body: params,
@@ -81,7 +86,7 @@ export class Documents {
 
   /**
    * `POST /v1/documents/batch` — send up to 100 documents for one company.
-   * Documents are processed independently, so the result array mixes sent
+   * Documents are processed independently, so the result array mixes accepted
    * documents with per-document error envelopes.
    */
   sendBatch(params: DocumentBatchSendParams): Promise<DocumentBatchResult> {

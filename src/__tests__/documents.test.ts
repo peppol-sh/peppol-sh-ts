@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { Peppol, PeppolNotFoundError } from "../index";
-import type { Document, DocumentSendParams } from "../resources/documents";
+import type {
+  DocumentAccepted,
+  DocumentSendParams,
+} from "../resources/documents";
 import { fetchStub, jsonResponse } from "./helpers";
 
 /** A document body straight from the `sendDocument` example in openapi.yaml. */
@@ -46,6 +49,13 @@ const DOCUMENT = {
   total: 605,
 };
 
+/** What `POST /v1/documents` answers: a pointer to the queued document. */
+const ACCEPTED: DocumentAccepted = {
+  id: "doc_a1b2c3d4",
+  status: "queued",
+  url: "/v1/documents/doc_a1b2c3d4",
+};
+
 function client(...responses: Array<Response | Error>) {
   const fetch = fetchStub(...responses);
   return {
@@ -56,11 +66,11 @@ function client(...responses: Array<Response | Error>) {
 
 describe("documents.send()", () => {
   it("POSTs the document to /v1/documents and returns the 202-accepted record", async () => {
-    const { fetch, peppol } = client(jsonResponse(DOCUMENT, 202));
+    const { fetch, peppol } = client(jsonResponse(ACCEPTED, 202));
 
-    const document = await peppol.documents.send(SEND_PARAMS);
+    const accepted = await peppol.documents.send(SEND_PARAMS);
 
-    expect(document).toEqual(DOCUMENT);
+    expect(accepted).toEqual(ACCEPTED);
     expect(fetch.calls).toHaveLength(1);
     expect(fetch.calls[0].method).toBe("POST");
     expect(fetch.calls[0].url).toBe("https://api.peppol.sh/v1/documents");
@@ -69,13 +79,13 @@ describe("documents.send()", () => {
 
   // The API answers 200 instead of 202 when an idempotent replay returns the
   // record that already exists. Both statuses carry the same schema, so the
-  // caller sees one `Document` type either way.
+  // caller sees one `DocumentAccepted` type either way.
   it("returns the same shape on a 200 idempotent replay", async () => {
-    const { peppol } = client(jsonResponse(DOCUMENT, 200));
+    const { peppol } = client(jsonResponse(ACCEPTED, 200));
 
-    const replay: Document = await peppol.documents.send(SEND_PARAMS);
+    const replay: DocumentAccepted = await peppol.documents.send(SEND_PARAMS);
 
-    expect(replay).toEqual(DOCUMENT);
+    expect(replay.url).toBe("/v1/documents/doc_a1b2c3d4");
   });
 });
 
@@ -89,14 +99,14 @@ describe("documents.sendBatch()", () => {
         param: "to.peppol_id",
       },
     };
-    const { fetch, peppol } = client(jsonResponse([DOCUMENT, failure], 202));
+    const { fetch, peppol } = client(jsonResponse([ACCEPTED, failure], 202));
 
     const results = await peppol.documents.sendBatch([
       SEND_PARAMS,
       { ...SEND_PARAMS, number: "INV-2026-002" },
     ]);
 
-    expect(results).toEqual([DOCUMENT, failure]);
+    expect(results).toEqual([ACCEPTED, failure]);
     expect(fetch.calls[0].method).toBe("POST");
     expect(fetch.calls[0].url).toBe("https://api.peppol.sh/v1/documents/batch");
     expect(JSON.parse(fetch.calls[0].body as string)).toEqual([

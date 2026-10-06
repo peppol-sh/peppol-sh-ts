@@ -34,4 +34,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `listAuditEvents`.
 - `kyc` — `get`, `uploadDocument`, `submit`.
 
+### Changed
+
+- `documents.send` returns the new `DocumentAccepted` type (`id`, `status`,
+  `url`), and `sendBatch` returns it for each accepted item. This is what the
+  API always returned; the types said `Document`. `Document` is now the
+  response of `documents.get`. Code that read fields such as `total` or
+  `number` from the result of `send` must call `documents.get` for them.
+
 [Unreleased]: https://github.com/peppol-sh/peppol-sh-ts/commits/main
