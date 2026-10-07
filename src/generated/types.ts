@@ -1697,8 +1697,23 @@ export interface components {
             from?: components["schemas"]["PartyInfo"];
             to?: components["schemas"]["PartyInfo"];
             lines?: components["schemas"]["LineItem"][];
+            /**
+             * @description Total amount without VAT (BT-109), max 2 decimals. Computed from
+             *     the lines and the line-level and document-level allowances and
+             *     charges.
+             */
             subtotal?: number;
+            /**
+             * @description Total VAT amount (BT-110), max 2 decimals. Computed from the lines
+             *     and the line-level and document-level allowances and charges.
+             */
             tax_total?: number;
+            /**
+             * @description Total amount with VAT (BT-112). Computed from the lines and the
+             *     line-level and document-level allowances and charges, max 2
+             *     decimals. A document that has no stored lines returns the total
+             *     that was recorded when it was created.
+             */
             total?: number;
             currency?: string;
             /** Format: date */

@@ -20,6 +20,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with VAT. The prepaid amount (BT-113) is the total less `amount_due`. `Document`
   has the field only when the document was created with one.
 
+### Fixed
+
+- `total`, `subtotal`, and `tax_total` on `Document`: the API includes the
+  line-level and the document-level allowances and charges in the total with
+  VAT (BT-112), the total without VAT (BT-109), and the VAT total (BT-110).
+  This is an API change: only the generated type comments changed.
+
 ## [0.2.0] - 2026-10-07
 
 ### Changed
