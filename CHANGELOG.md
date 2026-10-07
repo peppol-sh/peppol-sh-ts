@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `preceding_invoice` on `DocumentSendParams` and on `Document`: the preceding
+  invoice reference. This is the earlier invoice that a document corrects, for
+  example the invoice that a credit note credits. `number` is mandatory
+  (BT-25). `issue_date` is optional (BT-26). The type is
+  `ApiTypes.components["schemas"]["PrecedingInvoice"]`.
+
 ## [0.2.0] - 2026-10-07
 
 ### Changed

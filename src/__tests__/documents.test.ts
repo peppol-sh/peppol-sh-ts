@@ -87,6 +87,21 @@ describe("documents.send()", () => {
 
     expect(replay.url).toBe("/v1/documents/doc_a1b2c3d4");
   });
+
+  it("sends the preceding invoice reference of a credit note in the body", async () => {
+    const { fetch, peppol } = client(jsonResponse(ACCEPTED, 202));
+
+    await peppol.documents.send({
+      ...SEND_PARAMS,
+      type: "credit_note",
+      number: "CN-2026-001",
+      preceding_invoice: { number: "INV-2026-001", issue_date: "2026-03-01" },
+    });
+
+    expect(JSON.parse(fetch.calls[0].body as string).preceding_invoice).toEqual(
+      { number: "INV-2026-001", issue_date: "2026-03-01" },
+    );
+  });
 });
 
 describe("documents.sendBatch()", () => {
@@ -174,6 +189,23 @@ describe("documents.get()", () => {
     expect(fetch.calls[0].url).toBe(
       "https://api.peppol.sh/v1/documents/doc%2Fa%20b?company_id=com_abc123",
     );
+  });
+
+  it("returns the preceding invoice reference of the document", async () => {
+    const { peppol } = client(
+      jsonResponse({
+        ...DOCUMENT,
+        type: "credit_note",
+        preceding_invoice: { number: "INV-2026-001", issue_date: "2026-03-01" },
+      }),
+    );
+
+    const document = await peppol.documents.get("doc_a1b2c3d4", {
+      company_id: "com_abc123",
+    });
+
+    expect(document.preceding_invoice?.number).toBe("INV-2026-001");
+    expect(document.preceding_invoice?.issue_date).toBe("2026-03-01");
   });
 });
 

@@ -1542,6 +1542,7 @@ export interface components {
             /** @description VAT exemption reason text (BT-120). Applies at document level only. */
             vatex_note?: string;
             invoice_period?: components["schemas"]["InvoicePeriod"];
+            preceding_invoice?: components["schemas"]["PrecedingInvoice"];
         };
         /**
          * @description A document- or line-level allowance or charge. The sign is fixed by
@@ -1565,6 +1566,31 @@ export interface components {
             start_date?: string;
             /** Format: date */
             end_date?: string;
+        };
+        /**
+         * @description Preceding invoice reference — the earlier invoice this document
+         *     corrects, for example the invoice a credit note credits. Allowed on
+         *     both `invoice` and `credit_note`; one reference per document.
+         *
+         *     The value is an opaque reference that you supply. It is not looked up
+         *     or checked against an earlier peppol.sh document. It is emitted as
+         *     `cac:BillingReference/cac:InvoiceDocumentReference`.
+         * @example {
+         *       "number": "INV-2026-001",
+         *       "issue_date": "2026-03-01"
+         *     }
+         */
+        PrecedingInvoice: {
+            /**
+             * @description Number of the preceding invoice (BT-25). Leading and trailing
+             *     whitespace is removed; the result must not be empty.
+             */
+            number: string;
+            /**
+             * Format: date
+             * @description Issue date of the preceding invoice (BT-26), `YYYY-MM-DD`.
+             */
+            issue_date?: string;
         };
         /** @description A sender or recipient party on a document. */
         Party: {
@@ -1662,6 +1688,11 @@ export interface components {
             issue_date?: string;
             /** Format: date */
             due_date?: string;
+            /**
+             * @description Preceding invoice reference (BT-25, BT-26). Present only when the
+             *     document was created with one; otherwise the field is omitted.
+             */
+            preceding_invoice?: components["schemas"]["PrecedingInvoice"];
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */
@@ -3479,38 +3510,6 @@ export interface operations {
         };
         requestBody: {
             content: {
-                /**
-                 * @example {
-                 *       "company_id": "com_abc123",
-                 *       "type": "invoice",
-                 *       "number": "INV-2026-001",
-                 *       "issue_date": "2026-03-01",
-                 *       "due_date": "2026-03-31",
-                 *       "currency": "EUR",
-                 *       "from": {
-                 *         "name": "Acme BV",
-                 *         "tax_id": "BE0123456789",
-                 *         "address": {
-                 *           "street": "Keizerslaan 1",
-                 *           "city": "Brussels",
-                 *           "postal_code": "1000",
-                 *           "country": "BE"
-                 *         }
-                 *       },
-                 *       "to": {
-                 *         "name": "Client NV",
-                 *         "tax_id": "BE0987654321"
-                 *       },
-                 *       "lines": [
-                 *         {
-                 *           "description": "API Integration Services",
-                 *           "quantity": 1,
-                 *           "unit_price": 500,
-                 *           "tax_rate": 21
-                 *         }
-                 *       ]
-                 *     }
-                 */
                 "application/json": components["schemas"]["DocumentCreate"] & {
                     /** @description ID of the company sending this document */
                     company_id: string;
