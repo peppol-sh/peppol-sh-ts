@@ -46,7 +46,7 @@ describe("health()", () => {
     );
     expect(fetch.calls[0].headers.get("accept")).toBe("application/json");
     expect(fetch.calls[0].headers.get("x-peppol-sdk")).toBe(
-      "@peppol-sh/sdk/0.1.0",
+      "@peppol-sh/sdk/0.2.0",
     );
     expect(fetch.calls[0].body).toBeUndefined();
   });

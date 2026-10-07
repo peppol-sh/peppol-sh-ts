@@ -69,7 +69,7 @@ export interface PeppolOptions {
   sleep?: (ms: number) => Promise<void>;
 }
 
-export const SDK_VERSION = "0.1.0";
+export const SDK_VERSION = "0.2.0";
 export const DEFAULT_BASE_URL = "https://api.peppol.sh";
 export const DEFAULT_TIMEOUT_MS = 30_000;
 export const DEFAULT_MAX_RETRIES = 2;

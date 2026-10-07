@@ -1,6 +1,10 @@
 # Runs at the root of the public mirror repo (peppol-sh/peppol-sh-ts).
 # Publishing happens here, tag-triggered, so releases are auditable where the
 # community looks (ADR-0022).
+#
+# To release: bump `version` in package.json and date the CHANGELOG entry
+# (`## [X.Y.Z] - YYYY-MM-DD`) in the monorepo, then merge. The monorepo mirror
+# workflow pushes the code and the `vX.Y.Z` tag to this repo.
 name: Release
 
 on:
