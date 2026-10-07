@@ -1543,6 +1543,23 @@ export interface components {
             vatex_note?: string;
             invoice_period?: components["schemas"]["InvoicePeriod"];
             preceding_invoice?: components["schemas"]["PrecedingInvoice"];
+            /**
+             * @description Amount due for payment (BT-115), in the document currency. Use it
+             *     for a document that is paid, fully or in part, before you send it:
+             *     `0` for a fully prepaid document. Allowed on both `invoice` and
+             *     `credit_note`.
+             *
+             *     The value must be from `0` up to the document total with VAT
+             *     (BT-112), with at most two decimals. A value above the total is
+             *     refused with a 422 `amount_due_exceeds_total`. The prepaid amount
+             *     (BT-113, `cbc:PrepaidAmount`) is not an input: it is the total
+             *     with VAT less `amount_due`.
+             *
+             *     If you omit the field, the amount due is the total with VAT and
+             *     the document has no prepaid amount.
+             * @example 0
+             */
+            amount_due?: number;
         };
         /**
          * @description A document- or line-level allowance or charge. The sign is fixed by
@@ -1693,6 +1710,15 @@ export interface components {
              *     document was created with one; otherwise the field is omitted.
              */
             preceding_invoice?: components["schemas"]["PrecedingInvoice"];
+            /**
+             * @description Amount due for payment (BT-115). Present only when the document
+             *     was created with one; otherwise the field is omitted and the
+             *     amount due is the document total with VAT. The prepaid amount
+             *     (BT-113) is the document total with VAT (BT-112) less
+             *     `amount_due`. `total` does not change when a document has an
+             *     `amount_due`.
+             */
+            amount_due?: number;
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */
@@ -1997,6 +2023,7 @@ export interface components {
          *     | validation_error | `invalid_account_status` | Operation not allowed in the account's current status. |
          *     | validation_error | `invalid_peppol_id` | Peppol participant ID has an invalid format. |
          *     | validation_error | `invalid_scheme` | Peppol scheme (EAS) is unknown. |
+         *     | validation_error | `amount_due_exceeds_total` | 422 — `amount_due` is more than the document total with VAT. |
          *     | validation_error | `batch_too_large` | Batch contains more than 100 documents. |
          *     | validation_error | `mixed_company_ids` | Batch mixes multiple `company_id`s. |
          *     | validation_error | `idempotency_key_mismatch` | The `Idempotency-Key` header and the `idempotency_key` body field carry different keys. |

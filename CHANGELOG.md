@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   example the invoice that a credit note credits. `number` is mandatory
   (BT-25). `issue_date` is optional (BT-26). The type is
   `ApiTypes.components["schemas"]["PrecedingInvoice"]`.
+- `amount_due` on `DocumentSendParams` and on `Document`: the amount due for
+  payment (BT-115), for a document that is paid before it is sent. Use `0` for
+  a fully prepaid document. The value must be from `0` up to the document total
+  with VAT. The prepaid amount (BT-113) is the total less `amount_due`. `Document`
+  has the field only when the document was created with one.
 
 ## [0.2.0] - 2026-10-07
 

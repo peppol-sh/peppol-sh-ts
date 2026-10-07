@@ -104,6 +104,16 @@ describe("documents.send()", () => {
   });
 });
 
+describe("documents.send() with amount_due", () => {
+  it("sends the amount due of a prepaid invoice in the body, also when it is 0", async () => {
+    const { fetch, peppol } = client(jsonResponse(ACCEPTED, 202));
+
+    await peppol.documents.send({ ...SEND_PARAMS, amount_due: 0 });
+
+    expect(JSON.parse(fetch.calls[0].body as string).amount_due).toBe(0);
+  });
+});
+
 describe("documents.sendBatch()", () => {
   it("POSTs the array to /v1/documents/batch and returns one result per input", async () => {
     const failure = {
@@ -206,6 +216,16 @@ describe("documents.get()", () => {
 
     expect(document.preceding_invoice?.number).toBe("INV-2026-001");
     expect(document.preceding_invoice?.issue_date).toBe("2026-03-01");
+  });
+
+  it("returns the amount due of a prepaid document", async () => {
+    const { peppol } = client(jsonResponse({ ...DOCUMENT, amount_due: 0 }));
+
+    const document = await peppol.documents.get("doc_a1b2c3d4", {
+      company_id: "com_abc123",
+    });
+
+    expect(document.amount_due).toBe(0);
   });
 });
 
