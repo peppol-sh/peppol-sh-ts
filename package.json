@@ -1,6 +1,6 @@
 {
   "name": "@peppol-sh/sdk",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Official TypeScript SDK for the peppol.sh Peppol API: Peppol e-invoicing (UBL, EN 16931) for TypeScript and JavaScript.",
   "license": "MIT",
   "type": "module",
