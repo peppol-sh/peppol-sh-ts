@@ -240,7 +240,7 @@ answers `202` when it queues a new send and `200` when it replays an existing
 one; both carry the same `DocumentAccepted` shape (`id`, `status`, `url`), so
 the SDK returns the same type either way and you always get the `id` of the
 record that exists. A retried send therefore never produces a duplicate invoice
-on the network.
+on the network, and a replay does not cost a credit.
 
 ## API surface
 

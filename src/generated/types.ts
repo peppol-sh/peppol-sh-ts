@@ -580,7 +580,9 @@ export interface paths {
          *
          *     The `Idempotency-Key` header has no effect here, because one key
          *     cannot identify many documents. To make a retry safe, set
-         *     `idempotency_key` on each document.
+         *     `idempotency_key` on each document. An item whose key was already
+         *     accepted gets the `id` and `url` of the existing document and does
+         *     not cost a credit.
          */
         post: operations["sendDocumentBatch"];
         delete?: never;
@@ -3562,8 +3564,9 @@ export interface operations {
             /**
              * @description Idempotent replay — the same idempotency key was already accepted,
              *     so the `id` and `url` of the existing document are returned and no
-             *     second send is queued. `status` is always `queued` here; get the
-             *     document at `url` for its current status.
+             *     second send is queued. A replay does not cost a credit, and it
+             *     succeeds when the balance is 0. `status` is always `queued` here;
+             *     get the document at `url` for its current status.
              */
             200: {
                 headers: {
