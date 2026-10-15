@@ -9,7 +9,7 @@ const COMPANY = {
   workspace_id: "wsp_abc123def456",
   role: "owner",
   is_live: false,
-  company_registration_id: "0123456789",
+  company_registration_id: "0123456749",
   tax_id: "BE0123456789",
   email: "billing@acme.be",
   country: "BE",
@@ -19,7 +19,7 @@ const COMPANY = {
     postal_code: "1000",
   },
   iban: "BE68539007547034",
-  peppol_id: "0208:0123456789",
+  peppol_id: "0208:0123456749",
   created_at: "2026-03-05T12:00:00.000Z",
 } as const;
 
@@ -38,7 +38,7 @@ describe("companies.create()", () => {
     const company = await peppol.companies.create({
       name: "Acme BV",
       country: "BE",
-      company_registration_id: "0123456789",
+      company_registration_id: "0123456749",
     });
 
     expect(company).toEqual(COMPANY);
@@ -46,7 +46,7 @@ describe("companies.create()", () => {
     expect(fetch.calls[0].url).toBe("https://api.peppol.sh/v1/companies");
     expect(fetch.calls[0].method).toBe("POST");
     expect(fetch.calls[0].body).toBe(
-      '{"name":"Acme BV","country":"BE","company_registration_id":"0123456789"}',
+      '{"name":"Acme BV","country":"BE","company_registration_id":"0123456749"}',
     );
   });
 });
@@ -82,7 +82,7 @@ const COMPANY_DETAIL = {
   id: "com_9fJ2kQ7bTx0Lm4Ne1Ry8",
   name: "Acme BV",
   workspace_id: "wsp_abc123def456",
-  company_registration_id: "0123456789",
+  company_registration_id: "0123456749",
   tax_id: "BE0123456789",
   email: "billing@acme.be",
   country: "BE",
@@ -92,7 +92,7 @@ const COMPANY_DETAIL = {
     postal_code: "1000",
   },
   iban: "BE68539007547034",
-  peppol_id: "0208:0123456789",
+  peppol_id: "0208:0123456749",
   is_live: true,
   created_at: "2026-03-05T12:00:00.000Z",
   updated_at: "2026-03-06T09:30:00.000Z",

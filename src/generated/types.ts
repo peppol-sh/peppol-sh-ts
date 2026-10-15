@@ -479,11 +479,21 @@ export interface paths {
          * @description Create a new company (business entity) in the caller's workspace. The
          *     response echoes the caller's workspace `role`.
          *
-         *     Only `name` and `country` are required. `country` must be an ISO 3166-1
-         *     alpha-2 code for a country with active Peppol support (e.g. `BE`);
-         *     codes that are unknown or not Peppol-active (e.g. `FR`) are rejected
-         *     with `invalid_country`. A missing `name` or `country` returns
+         *     `name`, `country` and a Peppol ID are required. `country` must be an
+         *     ISO 3166-1 alpha-2 code for a country with active Peppol support (e.g.
+         *     `BE`); codes that are unknown or not Peppol-active (e.g. `FR`) are
+         *     rejected with `invalid_country`. A missing `name` or `country` returns
          *     `missing_field`.
+         *
+         *     **Peppol ID.** Send `peppol_id`, except for a Belgian company with a
+         *     `company_registration_id`: it defaults to `0208:<company_registration_id>`.
+         *     With no Peppol ID the request fails with `missing_peppol_id`. The Peppol
+         *     ID is checked against the OpenPeppol participant identifier scheme code
+         *     list: the scheme must be active, the identifier must have the format and
+         *     check digit of its scheme (`invalid_peppol_id`), and the scheme must
+         *     belong to `country` or be international, such as `0088` (GLN) or `0199`
+         *     (LEI) (`peppol_id_country_mismatch`). For example, a company in `GB`
+         *     uses `9932:GB123456789` (UK VAT number), not a Belgian `0208` number.
          *
          *     **Auto-provisioning.** In a workspace whose KYC status is already
          *     `approved`, creating a company **auto-provisions** its e-invoice.be
@@ -1151,7 +1161,7 @@ export interface components {
             country: string;
             /** @description Company registration number (e.g. KBO/CBE number). Optional. */
             company_registration_id?: string;
-            /** @description VAT number (e.g., `BE0123456789`). Optional. */
+            /** @description VAT number (e.g., `BE0123456749`). Optional. */
             tax_id?: string;
             /**
              * Format: email
@@ -1162,10 +1172,14 @@ export interface components {
             iban?: string;
             /**
              * @description Peppol participant identifier in `scheme:id` form (e.g.
-             *     `0208:0123456789`). Optional. When omitted, a Belgian company
-             *     defaults to `0208:<company_registration_id>`; any other country
-             *     stays unset until one is provided. An ill-formed value is rejected
-             *     with `invalid_peppol_id`.
+             *     `0208:0123456749`). Required, except for a Belgian company with a
+             *     `company_registration_id`: it defaults to
+             *     `0208:<company_registration_id>`. Without one the request fails with
+             *     `missing_peppol_id`. The scheme must be active in the OpenPeppol
+             *     participant identifier scheme code list and the identifier must
+             *     have its format and check digit (`invalid_peppol_id`). The scheme
+             *     must belong to `country` or be international
+             *     (`peppol_id_country_mismatch`).
              */
             peppol_id?: string;
             /** @description Company address. Optional. */
@@ -1185,17 +1199,23 @@ export interface components {
             tax_id?: string;
             /** Format: email */
             email?: string;
-            /** @description ISO 3166-1 alpha-2 country code; validated the same way as on create. */
+            /**
+             * @description ISO 3166-1 alpha-2 country code; validated the same way as on create.
+             *     A new country re-checks the stored Peppol ID and fails with
+             *     `peppol_id_country_mismatch` when its scheme belongs to another
+             *     country.
+             */
             country?: string;
             iban?: string;
             /**
              * @description Peppol participant identifier in `scheme:id` form. Editable both
              *     before and after go-live: once the company's provider tenant is
              *     provisioned, a change is pushed to that tenant BEFORE it is stored,
-             *     so the tenant always owns the Peppol ID it sends from. An ill-formed
-             *     value is rejected with `invalid_peppol_id`; a provider failure on the
-             *     push returns `502 provider_update_failed` and leaves the value
-             *     unchanged.
+             *     so the tenant always owns the Peppol ID it sends from. It is checked
+             *     as on create, against the company country after the update:
+             *     `invalid_peppol_id` or `peppol_id_country_mismatch`. A provider
+             *     failure on the push returns `502 provider_update_failed` and leaves
+             *     the value unchanged.
              */
             peppol_id?: string;
             address?: {
@@ -1294,7 +1314,7 @@ export interface components {
             iban?: string | null;
             /**
              * @description Peppol participant identifier in `scheme:id` form (e.g.
-             *     `0208:0123456789`) — the identifier the company's provider tenant
+             *     `0208:0123456749`) — the identifier the company's provider tenant
              *     owns and sends from.
              */
             peppol_id?: string | null;
@@ -1615,8 +1635,8 @@ export interface components {
         Party: {
             name: string;
             /**
-             * @description Tax ID. Can be in Peppol format (`0208:0123456789`)
-             *     or plain (`BE0123456789`) — we resolve the scheme.
+             * @description Tax ID. Can be in Peppol format (`0208:0123456749`)
+             *     or plain (`BE0123456749`) — we resolve the scheme.
              */
             tax_id: string;
             address?: components["schemas"]["Address"];
@@ -2038,7 +2058,9 @@ export interface components {
          *     | validation_error | `no_fields_to_update` | PATCH with an empty update body. |
          *     | validation_error | `last_owner` | Cannot remove/demote the last owner of a company. |
          *     | validation_error | `invalid_account_status` | Operation not allowed in the account's current status. |
-         *     | validation_error | `invalid_peppol_id` | Peppol participant ID has an invalid format. |
+         *     | validation_error | `invalid_peppol_id` | Peppol participant ID has an invalid format, check digit or scheme. |
+         *     | validation_error | `missing_peppol_id` | 400 — a company needs a Peppol ID and none was given or derived. |
+         *     | validation_error | `peppol_id_country_mismatch` | 400 — the Peppol ID scheme belongs to another country than the company. |
          *     | validation_error | `invalid_scheme` | Peppol scheme (EAS) is unknown. |
          *     | validation_error | `amount_due_exceeds_total` | 422 — `amount_due` is more than the document total with VAT. |
          *     | validation_error | `batch_too_large` | Batch contains more than 100 documents. |
@@ -3254,7 +3276,7 @@ export interface operations {
                      *         {
                      *           "id": "com_9fJ2kQ7bTx0Lm4Ne1Ry8",
                      *           "name": "Acme BV",
-                     *           "tax_id": "BE0123456789",
+                     *           "tax_id": "BE0123456749",
                      *           "country": "BE",
                      *           "is_live": true,
                      *           "workspace_id": "wsp_abc123def456",
@@ -3297,8 +3319,8 @@ export interface operations {
                      *       "workspace_id": "wsp_abc123def456",
                      *       "role": "owner",
                      *       "is_live": false,
-                     *       "company_registration_id": "0123456789",
-                     *       "tax_id": "BE0123456789",
+                     *       "company_registration_id": "0123456749",
+                     *       "tax_id": "BE0123456749",
                      *       "email": "billing@acme.be",
                      *       "country": "BE",
                      *       "address": {
@@ -3307,7 +3329,7 @@ export interface operations {
                      *         "postal_code": "1000"
                      *       },
                      *       "iban": "BE68539007547034",
-                     *       "peppol_id": "0208:0123456789",
+                     *       "peppol_id": "0208:0123456749",
                      *       "created_at": "2026-03-05T12:00:00.000Z"
                      *     }
                      */
@@ -3316,8 +3338,12 @@ export interface operations {
             };
             /**
              * @description Validation error — `missing_field` (`name` or `country` omitted),
-             *     `invalid_country` (country unknown or not Peppol-active), or
-             *     `invalid_peppol_id` (Peppol ID not in `scheme:id` form).
+             *     `invalid_country` (country unknown or not Peppol-active),
+             *     `missing_peppol_id` (no Peppol ID given and none can be derived),
+             *     `invalid_peppol_id` (not `scheme:id`; unknown, removed or deprecated
+             *     scheme; wrong format or check digit), or `peppol_id_country_mismatch`
+             *     (the scheme belongs to another country). The message names the
+             *     schemes to use instead.
              */
             400: {
                 headers: {
@@ -3369,8 +3395,8 @@ export interface operations {
                      *       "id": "com_9fJ2kQ7bTx0Lm4Ne1Ry8",
                      *       "name": "Acme BV",
                      *       "workspace_id": "wsp_abc123def456",
-                     *       "company_registration_id": "0123456789",
-                     *       "tax_id": "BE0123456789",
+                     *       "company_registration_id": "0123456749",
+                     *       "tax_id": "BE0123456749",
                      *       "email": "billing@acme.be",
                      *       "country": "BE",
                      *       "address": {
@@ -3379,7 +3405,7 @@ export interface operations {
                      *         "postal_code": "1000"
                      *       },
                      *       "iban": "BE68539007547034",
-                     *       "peppol_id": "0208:0123456789",
+                     *       "peppol_id": "0208:0123456749",
                      *       "is_live": true,
                      *       "created_at": "2026-03-05T12:00:00.000Z",
                      *       "updated_at": "2026-03-06T09:30:00.000Z"
@@ -3418,7 +3444,7 @@ export interface operations {
                 /**
                  * @example {
                  *       "name": "Acme BV (new name)",
-                 *       "tax_id": "BE0123456789"
+                 *       "tax_id": "BE0123456749"
                  *     }
                  */
                 "application/json": components["schemas"]["CompanyUpdate"];
@@ -3436,8 +3462,8 @@ export interface operations {
                      *       "id": "com_9fJ2kQ7bTx0Lm4Ne1Ry8",
                      *       "name": "Acme BV (new name)",
                      *       "workspace_id": "wsp_abc123def456",
-                     *       "company_registration_id": "0123456789",
-                     *       "tax_id": "BE0123456789",
+                     *       "company_registration_id": "0123456749",
+                     *       "tax_id": "BE0123456749",
                      *       "email": "billing@acme.be",
                      *       "country": "BE",
                      *       "address": {
@@ -3446,7 +3472,7 @@ export interface operations {
                      *         "postal_code": "1000"
                      *       },
                      *       "iban": "BE68539007547034",
-                     *       "peppol_id": "0208:0123456789",
+                     *       "peppol_id": "0208:0123456749",
                      *       "is_live": true,
                      *       "created_at": "2026-03-05T12:00:00.000Z",
                      *       "updated_at": "2026-03-07T14:05:00.000Z"
@@ -3455,12 +3481,30 @@ export interface operations {
                     "application/json": components["schemas"]["CompanyDetail"];
                 };
             };
-            /** @description No fields to update, `invalid_country`, or `invalid_peppol_id` */
+            /**
+             * @description `no_fields_to_update`, `invalid_country`, `invalid_peppol_id`, or
+             *     `peppol_id_country_mismatch`. The Peppol ID is checked against the
+             *     company country after the update, so a request that changes only
+             *     `country` to another value re-checks the stored Peppol ID.
+             */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "type": "validation_error",
+                     *         "code": "peppol_id_country_mismatch",
+                     *         "message": "0208 (BE enterprise number) is for a company in Belgium, not in the United Kingdom. Use 9932 (UK VAT), for example 9932:GB123456789, or an international scheme such as 0088 (GLN).",
+                     *         "param": "peppol_id",
+                     *         "retry": {
+                     *           "retryable": false
+                     *         }
+                     *       }
+                     *     }
+                     */
                     "application/json": components["schemas"]["ErrorObject"];
                 };
             };
@@ -3824,8 +3868,8 @@ export interface operations {
             header?: never;
             path: {
                 /**
-                 * @description Peppol participant ID in `EAS:code` format (e.g., `0208:0123456789`)
-                 * @example 0208:0123456789
+                 * @description Peppol participant ID in `EAS:code` format (e.g., `0208:0123456749`)
+                 * @example 0208:0123456749
                  */
                 peppol_id: string;
             };
@@ -3896,8 +3940,8 @@ export interface operations {
             header?: never;
             path: {
                 /**
-                 * @description Peppol participant ID in `EAS:code` format (e.g., `0208:0123456789`)
-                 * @example 0208:0123456789
+                 * @description Peppol participant ID in `EAS:code` format (e.g., `0208:0123456749`)
+                 * @example 0208:0123456749
                  */
                 peppol_id: string;
             };

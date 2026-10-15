@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- The doc comments of `peppol_id` on `CompanyCreate` and `CompanyUpdate`
+  describe the new API checks (#391): the scheme must be active, the
+  identifier must have the format and check digit of its scheme, and the
+  scheme must belong to the company country or be international. The API
+  returns `peppol_id_country_mismatch` for a scheme of another country.
+
 ## [0.3.0] - 2026-10-08
 
 ### Added
