@@ -4023,6 +4023,21 @@ export interface operations {
                 };
             };
             403: components["responses"]["Forbidden"];
+            /**
+             * @description The Peppol network could not validate the document. The error
+             *     `type` is `provider_error`, with `code` `provider_unavailable`,
+             *     `rate_limited`, `sender_not_registered`, or `provider_error`. A
+             *     document that the network rejects comes back as a `200` with
+             *     `valid: false`.
+             */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorObject"];
+                };
+            };
         };
     };
     listWebhooks: {
