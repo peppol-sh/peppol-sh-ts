@@ -525,7 +525,25 @@ export interface paths {
         get: operations["getCompany"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete company
+         * @description Delete a company with its documents, its company-scoped API keys, and
+         *     its Peppol registration. Only workspace **owners** can delete a
+         *     company.
+         *
+         *     **Warning:** you cannot undo the delete. A live company also loses
+         *     its Peppol registration: other Peppol participants can no longer send
+         *     invoices to its Peppol ID.
+         *
+         *     A `ps_test_` key can delete only a company that is not live
+         *     (`is_live: false`). To delete a live company, use a `ps_live_` key.
+         *     The company that anchors the workspace verification (KYC) cannot be
+         *     deleted.
+         *
+         *     The delete is safe to repeat after a `502`. A repeat after a
+         *     successful delete gives `404`.
+         */
+        delete: operations["deleteCompany"];
         options?: never;
         head?: never;
         /**
@@ -3424,6 +3442,97 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             /** @description Company not found (or you are not a member) */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorObject"];
+                };
+            };
+        };
+    };
+    deleteCompany: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Company ID (e.g., `com_abc123`)
+                 * @example com_abc123
+                 */
+                id: components["parameters"]["CompanyId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Company deleted. The response has no body. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            /**
+             * @description `insufficient_role` — only workspace owners can delete a company.
+             *     `live_company_requires_live_key` — the company is live and the
+             *     request used a `ps_test_` key. `key_company_scope` — the API key
+             *     is scoped to a different company.
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "type": "authorization_error",
+                     *         "code": "live_company_requires_live_key",
+                     *         "message": "This company is live on the Peppol network. Use a live API key (ps_live_) to delete it.",
+                     *         "retry": {
+                     *           "retryable": false
+                     *         }
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorObject"];
+                };
+            };
+            /**
+             * @description `company_not_found` — the company does not exist, or you are not
+             *     a member of its workspace.
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorObject"];
+                };
+            };
+            /**
+             * @description `company_is_kyc_anchor` — the company anchors the workspace
+             *     verification (KYC) and cannot be deleted. The `type` is
+             *     `validation_error`.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorObject"];
+                };
+            };
+            /**
+             * @description `provider_unavailable` — the company could not be removed from
+             *     the Peppol network. Nothing was changed. Try again later.
+             *     `company_delete_incomplete` — the company was removed from the
+             *     Peppol network, but its record was not deleted. The message
+             *     contains the company id. Repeat the delete.
+             */
+            502: {
                 headers: {
                     [name: string]: unknown;
                 };

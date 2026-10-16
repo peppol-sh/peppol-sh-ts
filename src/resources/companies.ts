@@ -71,4 +71,16 @@ export class Companies {
       body: params,
     });
   }
+
+  /**
+   * `DELETE /v1/companies/{id}` — delete the company, its documents, and its
+   * Peppol registration. Owners only; it cannot be undone. A `ps_test_` key
+   * can delete only a company that is not live.
+   */
+  delete(id: string): Promise<void> {
+    return this.request<void>({
+      method: "DELETE",
+      path: `/v1/companies/${encodeURIComponent(id)}`,
+    });
+  }
 }

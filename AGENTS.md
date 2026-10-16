@@ -36,7 +36,7 @@ const peppol = new Peppol({
 | Namespace | Methods |
 |---|---|
 | `peppol` | `signup`, `health` |
-| `peppol.companies` | `create`, `list`, `get`, `update` |
+| `peppol.companies` | `create`, `list`, `get`, `update`, `delete` |
 | `peppol.documents` | `send`, `sendBatch`, `list`, `get`, `history`, `ubl`, `listAttachments`, `getAttachment` |
 | `peppol.validate` | `document` |
 | `peppol.lookup` | `participant`, `dns` |

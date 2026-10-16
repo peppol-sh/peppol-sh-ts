@@ -169,3 +169,20 @@ describe("error pass-through", () => {
     expect((thrown as PeppolValidationError).code).toBe("invalid_country");
   });
 });
+
+describe("companies.delete() (#405)", () => {
+  it("DELETEs /v1/companies/{id} with no body and resolves to undefined on 204", async () => {
+    const { fetch, peppol } = client(new Response(null, { status: 204 }));
+
+    await expect(
+      peppol.companies.delete("com_9fJ2kQ7bTx0Lm4Ne1Ry8"),
+    ).resolves.toBeUndefined();
+
+    expect(fetch.calls).toHaveLength(1);
+    expect(fetch.calls[0].method).toBe("DELETE");
+    expect(fetch.calls[0].url).toBe(
+      "https://api.peppol.sh/v1/companies/com_9fJ2kQ7bTx0Lm4Ne1Ry8",
+    );
+    expect(fetch.calls[0].body).toBeUndefined();
+  });
+});

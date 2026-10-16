@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-16
+
+### Added
+
+- `companies.delete(id)`: `DELETE /v1/companies/{id}` deletes a company, its
+  documents, and its Peppol registration, and resolves to `undefined` (the API
+  answers `204`). Only workspace owners can delete a company, and the delete
+  cannot be undone. A `ps_test_` key can delete only a company that is not
+  live; for a live company the API returns `live_company_requires_live_key`
+  (#405).
+
 ### Changed
 
 - The doc comment of `tax_id` on `Party` says that a `tax_id` with no
@@ -82,5 +93,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `kyc` — `get`, `uploadDocument`, `submit`.
 
 [Unreleased]: https://github.com/peppol-sh/peppol-sh-ts/commits/main
+[0.4.0]: https://github.com/peppol-sh/peppol-sh-ts/releases/tag/v0.4.0
 [0.3.0]: https://github.com/peppol-sh/peppol-sh-ts/releases/tag/v0.3.0
 [0.2.0]: https://github.com/peppol-sh/peppol-sh-ts/releases/tag/v0.2.0
