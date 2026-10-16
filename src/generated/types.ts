@@ -1654,7 +1654,13 @@ export interface components {
             name: string;
             /**
              * @description Tax ID. Can be in Peppol format (`0208:0123456749`)
-             *     or plain (`BE0123456749`) — we resolve the scheme.
+             *     or plain (`BE0123456749`) — we resolve the scheme. A Swedish VAT
+             *     number (`SE556905539401`) resolves to the 10-digit organisation
+             *     number (`0007:5569055394`). When `peppol_id` is absent, the
+             *     resolved Peppol ID must have the format and check digit of its
+             *     scheme, else the document is rejected with `invalid_peppol_id`
+             *     (422). For `from`, this check does not apply to a VAT number. A French VAT number (`FR12345678901`)
+             *     does not resolve to a Peppol ID: it is sent as the VAT number.
              *     A `tax_id` with a country prefix (`BE…`, `NL…B01`, `ATU…`) is sent
              *     as the VAT number. A `tax_id` with no country prefix (for example
              *     the Norwegian org number `995313863`) is not a VAT number: it is
