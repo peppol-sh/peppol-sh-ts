@@ -1637,6 +1637,13 @@ export interface components {
             /**
              * @description Tax ID. Can be in Peppol format (`0208:0123456749`)
              *     or plain (`BE0123456749`) — we resolve the scheme.
+             *     A `tax_id` with a country prefix (`BE…`, `NL…B01`, `ATU…`) is sent
+             *     as the VAT number. A `tax_id` with no country prefix (for example
+             *     the Norwegian org number `995313863`) is not a VAT number: it is
+             *     not sent as one, and the party then needs a `peppol_id`. For
+             *     `from`, the Peppol ID of the company is used when `peppol_id` is
+             *     absent. If no Peppol ID can be found, the send fails with
+             *     `sender_not_derivable`.
              */
             tax_id: string;
             address?: components["schemas"]["Address"];

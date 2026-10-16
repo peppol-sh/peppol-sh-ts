@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The doc comment of `tax_id` on `Party` says that a `tax_id` with no
+  country prefix is not sent as a VAT number, so the party then needs a
+  `peppol_id` (#395).
 - The doc comments of `peppol_id` on `CompanyCreate` and `CompanyUpdate`
   describe the new API checks (#391): the scheme must be active, the
   identifier must have the format and check digit of its scheme, and the
