@@ -5,7 +5,8 @@ import { fetchStub, jsonResponse } from "./helpers";
 const SMP_RESULT = {
   participant_id: { scheme: "0208", id: "0123456749" },
   domain: "sml",
-  naptr_domain: "b-1a2b3c.iso6523-actorid-upis.edelivery.tech.ec.europa.eu",
+  naptr_domain:
+    "b-1a2b3c.iso6523-actorid-upis.participant.sml.prod.tech.peppol.org",
   smp_url: "https://smp.example.be",
   services: [],
 } as const;
@@ -57,7 +58,8 @@ describe("lookup.participant()", () => {
 
 const DNS_RESULT = {
   peppol_id: "0208:0123456749",
-  naptr_hostname: "b-1a2b3c.iso6523-actorid-upis.edelivery.tech.ec.europa.eu",
+  naptr_hostname:
+    "b-1a2b3c.iso6523-actorid-upis.participant.sml.prod.tech.peppol.org",
   smp_url: "https://smp.example.be",
   domain: "sml",
 } as const;
