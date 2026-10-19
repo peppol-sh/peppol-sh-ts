@@ -830,8 +830,10 @@ export interface paths {
          *       - `application/json`: a `DocumentCreate` body plus `company_id`.
          *       - `multipart/form-data`: a UBL XML `file` plus `company_id` field.
          *
-         *     Field-level issues return a dot-path in `path` (e.g. `buyer.tax_id`,
-         *     `lines[0].unit_price`) so SDK clients can highlight the right form field.
+         *     An issue that the Peppol validation rules find has the rule id in `code`
+         *     (e.g. `BR-S-02`) and no `path`. An issue in the request body itself has
+         *     a dot-path in `path` (e.g. `to.tax_id`, `lines[0].unit_price`) so SDK
+         *     clients can highlight the right form field.
          */
         post: operations["validateDocument"];
         delete?: never;
@@ -1993,7 +1995,12 @@ export interface components {
              *     `lines[0].unit_price`. Omitted when the issue is document-wide.
              */
             path?: string;
-            /** @description Machine-readable issue code from the validator (e.g. `invalid_format`). */
+            /**
+             * @description Machine-readable issue code: the Peppol validation rule id (e.g.
+             *     `BR-S-02`), our own code for a request body issue (e.g.
+             *     `invalid_document_body`), or `invalid_document` when the provider
+             *     rejects the document without a rule id.
+             */
             code?: string;
             /** @description Human-readable description of the issue. */
             message: string;
@@ -4126,7 +4133,9 @@ export interface operations {
                 "multipart/form-data": {
                     /**
                      * Format: binary
-                     * @description UBL XML document to validate.
+                     * @description UBL XML document to validate (max 5 MB). Send the part with
+                     *     an XML content type such as `application/xml` or
+                     *     `text/xml`, or as `application/octet-stream`.
                      */
                     file: string;
                     /** @description Company whose provider credentials should validate this document. */
@@ -4144,7 +4153,50 @@ export interface operations {
                     "application/json": components["schemas"]["ValidationResult"];
                 };
             };
+            /**
+             * @description The request could not be read. The error `type` is
+             *     `validation_error`, with `code` `invalid_body` (the body is not a
+             *     JSON object or not valid multipart), `unsupported_content_type`,
+             *     `missing_field` (no `file` part), or `invalid_field` (the `file`
+             *     part type is not accepted).
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "type": "validation_error",
+                     *         "code": "invalid_body",
+                     *         "message": "The request body could not be read as a JSON object"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorObject"];
+                };
+            };
             403: components["responses"]["Forbidden"];
+            /** @description `file_too_large` — the `file` part exceeds the 5 MB limit. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "type": "validation_error",
+                     *         "code": "file_too_large",
+                     *         "message": "file exceeds maximum size of 5242880 bytes",
+                     *         "param": "file"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorObject"];
+                };
+            };
             /**
              * @description The Peppol network could not validate the document. The error
              *     `type` is `provider_error`, with `code` `provider_unavailable`,

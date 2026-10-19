@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The generated types of `POST /v1/validate` have the `400` response (a body
+  that cannot be read, or a `file` part of a type that is not accepted) and
+  the `413` response (`file_too_large`, a `file` part above 5 MB) (#413).
+- The doc comment of `code` on `ValidationIssue` names the issue codes: the
+  Peppol rule id (e.g. `BR-S-02`), `invalid_document_body` for a request body
+  issue, or `invalid_document` when the provider rejects the document without
+  a rule id (#413).
+
 ## [0.4.0] - 2026-10-16
 
 ### Added

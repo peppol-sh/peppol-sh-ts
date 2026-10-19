@@ -13,9 +13,10 @@ const PAYLOAD: ValidateDocumentParams = {
   type: "invoice",
   number: "INV-2026-0001",
   issue_date: "2026-04-04",
+  due_date: "2026-05-04",
   currency: "EUR",
   from: { name: "Acme BV", tax_id: "BE0123456789" },
-  to: { name: "Globex NV", tax_id: "BE0987654321" },
+  to: { name: "Globex NV", tax_id: "BE0403170701" },
   lines: [
     {
       description: "Consulting",
@@ -50,21 +51,20 @@ describe("validate.document()", () => {
     expect(fetch.calls[0].body).toBe(JSON.stringify(PAYLOAD));
   });
 
-  it("returns the field-level errors and warnings of a failing result", async () => {
+  it("returns the errors and warnings of a failing result", async () => {
     const result = {
       valid: false,
       errors: [
         {
-          path: "buyer.tax_id",
-          code: "invalid_format",
-          message: "VAT number is not in a valid format",
+          code: "BR-CO-25",
+          message:
+            "[BR-CO-25]-In case the Amount due for payment (BT-115) is positive, either the Payment due date (BT-9) or the Payment terms (BT-20) shall be present.",
         },
       ],
       warnings: [
         {
-          path: "lines[0].description",
-          code: "short_description",
-          message: "Description is unusually short",
+          code: "UBL-CR-005",
+          message: "[UBL-CR-005]-A UBL invoice should not include the UUID",
         },
       ],
     };
