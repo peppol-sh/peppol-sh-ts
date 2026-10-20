@@ -82,6 +82,9 @@ console.log(invoice.id, invoice.status, invoice.url);
 // doc_a1b2c3d4 queued /v1/documents/doc_a1b2c3d4
 ```
 
+A party needs a `tax_id`, a `peppol_id`, or both. A party with no VAT number
+(for example a Norwegian company) can have only a `peppol_id`.
+
 Sending is asynchronous. Read the document back for its current status, or
 subscribe to [webhooks](#webhooks) instead of polling.
 

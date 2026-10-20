@@ -102,6 +102,20 @@ describe("documents.send()", () => {
       { number: "INV-2026-001", issue_date: "2026-03-01" },
     );
   });
+
+  it("sends a recipient that has a peppol_id and no tax_id", async () => {
+    const { fetch, peppol } = client(jsonResponse(ACCEPTED, 202));
+
+    await peppol.documents.send({
+      ...SEND_PARAMS,
+      to: { name: "Fjord AS", peppol_id: "0192:995313863" },
+    });
+
+    expect(JSON.parse(fetch.calls[0].body as string).to).toEqual({
+      name: "Fjord AS",
+      peppol_id: "0192:995313863",
+    });
+  });
 });
 
 describe("documents.send() with amount_due", () => {

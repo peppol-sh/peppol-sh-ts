@@ -1651,11 +1651,16 @@ export interface components {
              */
             issue_date?: string;
         };
-        /** @description A sender or recipient party on a document. */
+        /**
+         * @description A sender or recipient party on a document. A party needs a `tax_id`,
+         *     a `peppol_id`, or both.
+         */
         Party: {
             name: string;
             /**
-             * @description Tax ID. Can be in Peppol format (`0208:0123456749`)
+             * @description Tax ID. Required when `peppol_id` is absent, and then it must not
+             *     be empty or only whitespace; else the document is rejected with
+             *     `invalid_document_body` (400). Can be in Peppol format (`0208:0123456749`)
              *     or plain (`BE0123456749`) — we resolve the scheme. A Swedish VAT
              *     number (`SE556905539401`) resolves to the 10-digit organisation
              *     number (`0007:5569055394`). When `peppol_id` is absent, the
@@ -1671,7 +1676,7 @@ export interface components {
              *     absent. If no Peppol ID can be found, the send fails with
              *     `sender_not_derivable`.
              */
-            tax_id: string;
+            tax_id?: string;
             address?: components["schemas"]["Address"];
             /** Format: email */
             email?: string;

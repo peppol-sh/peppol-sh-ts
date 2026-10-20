@@ -7,8 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-20
+
 ### Changed
 
+- `tax_id` on `Party` (the `from` and `to` of `DocumentSendParams`) is
+  optional, as in the API: a party needs a `tax_id` only when it has no
+  `peppol_id`. A party with only a `peppol_id` (for example a Norwegian
+  company with no VAT number) now compiles with no cast (#425).
 - `ErrorObject` has an optional `request_id` (the `cf-ray` of the request) on
   an `internal_error`. Give it to us when you report the error (#421).
 - The API now answers `400 invalid_document_body` (and not `500`) on
@@ -27,6 +33,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Peppol rule id (e.g. `BR-S-02`), `invalid_document_body` for a request body
   issue, or `invalid_document` when the provider rejects the document without
   a rule id (#413).
+
+### Fixed
+
+- A sandbox send no longer fails for a party with a `peppol_id`, no `tax_id`
+  and no `address.country`. The UBL of a party with no `tax_id` has no
+  `PartyTaxScheme` (#425).
 
 ## [0.4.0] - 2026-10-16
 
@@ -114,6 +126,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `kyc` — `get`, `uploadDocument`, `submit`.
 
 [Unreleased]: https://github.com/peppol-sh/peppol-sh-ts/commits/main
+[0.5.0]: https://github.com/peppol-sh/peppol-sh-ts/releases/tag/v0.5.0
 [0.4.0]: https://github.com/peppol-sh/peppol-sh-ts/releases/tag/v0.4.0
 [0.3.0]: https://github.com/peppol-sh/peppol-sh-ts/releases/tag/v0.3.0
 [0.2.0]: https://github.com/peppol-sh/peppol-sh-ts/releases/tag/v0.2.0
