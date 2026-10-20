@@ -128,6 +128,14 @@ export interface paths {
         /**
          * Invite a member to the workspace
          * @description Only workspace owners and admins can invite members.
+         *
+         *     This endpoint adds only an existing peppol.sh account, given by
+         *     `account_id` or by `email`. An email with no account gives
+         *     `404 account_not_found`. Unlike the API, the dashboard can invite an
+         *     address that has no account yet.
+         *
+         *     The added account gets an email that says to which workspace it was
+         *     added, with which role, and by whom.
          */
         post: operations["inviteWorkspaceMember"];
         delete?: never;
@@ -996,7 +1004,7 @@ export interface components {
              * @example api_key.created
              * @enum {string}
              */
-            event_type: "api_key.created" | "api_key.revoked" | "company.created" | "company.updated" | "membership.invited" | "membership.removed" | "membership.role_changed" | "membership.ownership_transferred" | "webhook.created" | "webhook.deleted" | "workspace.created";
+            event_type: "api_key.created" | "api_key.revoked" | "company.created" | "company.updated" | "membership.invited" | "membership.invite_resent" | "membership.removed" | "membership.role_changed" | "membership.ownership_transferred" | "webhook.created" | "webhook.deleted" | "workspace.created";
             /**
              * @example api_key
              * @enum {string|null}
@@ -2652,8 +2660,13 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @description ID of an existing account (prefixed `acc_`). */
                     account_id?: string;
-                    /** Format: email */
+                    /**
+                     * Format: email
+                     * @description Email of an existing account. Used when `account_id` is
+                     *     not given.
+                     */
                     email?: string;
                     /**
                      * @default member
