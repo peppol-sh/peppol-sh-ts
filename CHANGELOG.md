@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `DocumentEvent`, the item type of `documents.history`, has the fields the
+  API sends: `id`, `type`, `from_status`, `to_status`, `message` and
+  `created_at`. The old `event`, `timestamp` and `detail` fields were never
+  sent (#418).
+- `created_at`, `sent_at` and `delivered_at` of a document, `created_at` of a
+  history event, and `created_at` and `updated_at` of a company are RFC 3339
+  date-times (`2026-10-20T08:25:00Z`), as the types said. The API sent
+  `2026-10-20 08:25:00` before (#418).
+- `created_at` of a webhook, a workspace, a workspace member, an account,
+  an API key, a KYC document, a document attachment, an event and an audit
+  event, and `updated_at` of a workspace and `last_used_at` of an API key,
+  are RFC 3339 date-times too. The API sent `2026-10-20 08:25:00` before
+  (#418).
+- `documents.get` gives the `sandbox` flag and the `events` of the document,
+  which the API always sent. `from_status` of an event is a document status
+  (#418).
+- `health` gives `worker_version` (`id`, `created_at`), the Worker version
+  that served the request, or `null` (#418).
+- The generated types of `webhooks.create` have the `400` response, and those
+  of `documents.history` the `404` response (#418).
+- `website_urls` of a Business Card entity is a plain string: a participant
+  can enter `www.peppol.org` (#418).
+- The API now answers `400 invalid_body` (and not `500`) on `companies.create`
+  and `companies.update` when the body is not valid JSON or not a JSON object
+  (#418).
+
 ## [0.5.0] - 2026-10-20
 
 ### Changed

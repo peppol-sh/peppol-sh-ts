@@ -1028,6 +1028,20 @@ export interface components {
              * @enum {string}
              */
             environment: "production" | "staging" | "development" | "test" | "unknown";
+            /**
+             * @description The Cloudflare Worker version that served this request. A check
+             *     after a deploy waits until `created_at` is later than the deploy
+             *     start. `null` when the runtime has no version metadata.
+             */
+            worker_version: {
+                /** @description Worker version id */
+                id: string;
+                /**
+                 * Format: date-time
+                 * @description When the version was uploaded
+                 */
+                created_at: string;
+            } | null;
             checks: {
                 /**
                  * @description Database connectivity status
@@ -1801,6 +1815,16 @@ export interface components {
             /** Format: date-time */
             delivered_at?: string | null;
         };
+        /** @description A document with its sandbox flag and its delivery history. */
+        DocumentDetail: components["schemas"]["Document"] & {
+            /**
+             * @description `true` when a `ps_test_` key sent the document; it never
+             *     reached the Peppol network.
+             */
+            sandbox: boolean;
+            /** @description The status changes of the document, oldest first. */
+            events: components["schemas"]["DocumentEvent"][];
+        };
         /**
          * @description A document accepted for async sending. Get the full document at `url`.
          * @example {
@@ -1834,13 +1858,22 @@ export interface components {
             tax_id?: string;
             peppol_id?: string;
         };
-        /** @description A single entry in a document's delivery-history timeline. */
+        /** @description One status change in a document's delivery-history timeline. */
         DocumentEvent: {
-            /** @enum {string} */
-            event?: "created" | "validated" | "queued" | "sending" | "delivered" | "failed";
+            /** @description Event ID (prefixed `evt_`) */
+            id: string;
+            /**
+             * @description The kind of event; for a status change, the new status.
+             * @example delivered
+             */
+            type: string;
+            /** @description The status before the event; `null` for the first event. */
+            from_status: components["schemas"]["DocumentStatus"] | null;
+            to_status: components["schemas"]["DocumentStatus"];
+            /** @description Detail of the event, for example the reason of a failure. */
+            message: string | null;
             /** Format: date-time */
-            timestamp?: string;
-            detail?: string | null;
+            created_at: string;
         };
         /** @description Metadata for one attachment stored with a document. */
         DocumentAttachment: {
@@ -1956,6 +1989,10 @@ export interface components {
                         /** @description Identifier value */
                         value?: string;
                     }[];
+                    /**
+                     * @description As the participant entered them in its Business Card;
+                     *     not always an absolute URI (for example `www.peppol.org`).
+                     */
                     website_urls?: string[];
                     contacts?: {
                         type?: string | null;
@@ -3848,7 +3885,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Document"];
+                    "application/json": components["schemas"]["DocumentDetail"];
                 };
             };
             /** @description Not a member of the specified company */
@@ -3881,6 +3918,19 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DocumentEvent"][];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            /**
+             * @description `document_not_found` — no document with this id in the caller's
+             *     workspace.
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorObject"];
                 };
             };
         };
@@ -4269,6 +4319,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Webhook"];
+                };
+            };
+            /**
+             * @description The body is not a valid webhook. The error `type` is
+             *     `validation_error`, with `code` `missing_url`, `invalid_url`,
+             *     `missing_events`, or `invalid_event`.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "type": "validation_error",
+                     *         "code": "missing_url",
+                     *         "message": "url is required",
+                     *         "param": "url"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ErrorObject"];
                 };
             };
             401: components["responses"]["Unauthenticated"];
