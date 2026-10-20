@@ -2100,6 +2100,8 @@ export interface components {
          *     | validation_error | `missing_peppol_id` | 400 — a company needs a Peppol ID and none was given or derived. |
          *     | validation_error | `peppol_id_country_mismatch` | 400 — the Peppol ID scheme belongs to another country than the company. |
          *     | validation_error | `invalid_scheme` | Peppol scheme (EAS) is unknown. |
+         *     | validation_error | `invalid_body` | The request body could not be read (for example, it is not valid JSON). |
+         *     | validation_error | `invalid_document_body` | A document field is missing or has an invalid value. `param` is its dot-path, for example `from.tax_id`. |
          *     | validation_error | `amount_due_exceeds_total` | 422 — `amount_due` is more than the document total with VAT. |
          *     | validation_error | `batch_too_large` | Batch contains more than 100 documents. |
          *     | validation_error | `mixed_company_ids` | Batch mixes multiple `company_id`s. |
@@ -2148,7 +2150,7 @@ export interface components {
          *     | rate_limit_error | `rate_limit_exceeded` | Too many requests. Wait for the `Retry-After` time, then retry. |
          *     | billing_error | `insufficient_credits` | Company does not have enough credits to send the document(s). Purchase more via `POST /v1/billing/checkout`. |
          *     | billing_error | `sandbox_not_allowed` | Billing endpoints (e.g. `POST /v1/billing/checkout`) reject sandbox API keys. |
-         *     | internal_error | `internal_error` | Unexpected server error. |
+         *     | internal_error | `internal_error` | Unexpected server error. Give us the `request_id` so that we can find it. |
          */
         ErrorObject: {
             error: {
@@ -2183,6 +2185,11 @@ export interface components {
                  *     raw validation errors for `provider_validation_failed`).
                  */
                 details?: unknown;
+                /**
+                 * @description Only on `internal_error`. The ID of the request (the `cf-ray`
+                 *     header). Give it to us when you report the error.
+                 */
+                request_id?: string;
             };
         };
     };

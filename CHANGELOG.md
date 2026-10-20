@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `ErrorObject` has an optional `request_id` (the `cf-ray` of the request) on
+  an `internal_error`. Give it to us when you report the error (#421).
+- The API now answers `400 invalid_document_body` (and not `500`) on
+  `documents.send` and `documents.sendBatch` when `number`, `from`, `to`,
+  `from.name`, `to.name`, or the `tax_id` of a party with no `peppol_id` is
+  missing, empty, or only whitespace; `param` names the field. A body that is
+  not valid JSON gives `400 invalid_body` (#421).
+- For `documents.sendBatch`, `param` starts with the index of the item, for
+  example `1.to.tax_id` (#421).
+- `validate.document` answers `valid: false` (and not `500`) for a body with
+  no `from` or `to`, with the same checks as a send (#421).
 - The generated types of `POST /v1/validate` have the `400` response (a body
   that cannot be read, or a `file` part of a type that is not accepted) and
   the `413` response (`file_too_large`, a `file` part above 5 MB) (#413).
