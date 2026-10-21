@@ -85,6 +85,12 @@ console.log(invoice.id, invoice.status, invoice.url);
 A party needs a `tax_id`, a `peppol_id`, or both. A party with no VAT number
 (for example a Norwegian company) can have only a `peppol_id`.
 
+`buyer_reference` (BT-10) is the reference the buyer asks for. Put the number
+of the buyer's purchase order in `purchase_order` (BT-13) and your own order
+number in `sales_order` (BT-14). A party can have an `email` and a
+`contact_name` (the name needs the email), and `to` can have an `identifier`:
+the number of the buyer in your system (BT-46).
+
 Sending is asynchronous. Read the document back for its current status, or
 subscribe to [webhooks](#webhooks) instead of polling.
 

@@ -116,6 +116,36 @@ describe("documents.send()", () => {
       peppol_id: "0192:995313863",
     });
   });
+
+  it("sends the order references, the buyer reference and the buyer contact in the body", async () => {
+    const { fetch, peppol } = client(jsonResponse(ACCEPTED, 202));
+
+    await peppol.documents.send({
+      ...SEND_PARAMS,
+      buyer_reference: "CC-42",
+      purchase_order: "PO-4711",
+      sales_order: "SO-88",
+      to: {
+        name: "Client NV",
+        tax_id: "BE0987654321",
+        email: "ann@client.example",
+        contact_name: "Ann Peeters",
+        identifier: "CUST-007",
+      },
+    });
+
+    const body = JSON.parse(fetch.calls[0].body as string);
+    expect(body.buyer_reference).toBe("CC-42");
+    expect(body.purchase_order).toBe("PO-4711");
+    expect(body.sales_order).toBe("SO-88");
+    expect(body.to).toEqual({
+      name: "Client NV",
+      tax_id: "BE0987654321",
+      email: "ann@client.example",
+      contact_name: "Ann Peeters",
+      identifier: "CUST-007",
+    });
+  });
 });
 
 describe("documents.send() with amount_due", () => {

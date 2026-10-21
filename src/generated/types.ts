@@ -1566,7 +1566,7 @@ export interface components {
              */
             currency: string;
             from: components["schemas"]["Party"];
-            to: components["schemas"]["Party"];
+            to: components["schemas"]["RecipientParty"];
             lines: components["schemas"]["LineItem"][];
             /** @description Optional note to include on the document */
             note?: string;
@@ -1580,14 +1580,28 @@ export interface components {
              */
             idempotency_key?: string;
             /**
-             * @description Buyer reference (BT-10) — the buyer's identifier for the invoice,
-             *     e.g. a purchase-order number.
+             * @description Buyer reference (BT-10), `cbc:BuyerReference`: the reference the
+             *     buyer asks for, for example a cost centre or a Leitweg-ID. It is
+             *     not copied to `cac:OrderReference/cbc:ID` (BT-13): send a purchase
+             *     order in `purchase_order`.
              *
-             *     Note: this value is emitted both as `cbc:BuyerReference` (BT-10)
-             *     **and** as `cac:OrderReference/cbc:ID` (BT-13). A dedicated BT-10
-             *     field decoupled from BT-13 is not yet available.
+             *     Without `buyer_reference`, a document gets `purchase_order`,
+             *     else `to.identifier`, else `Unknown` as BT-10.
              */
             buyer_reference?: string;
+            /**
+             * @description Purchase order reference (BT-13), `cac:OrderReference/cbc:ID`: the
+             *     number of the buyer's purchase order.
+             * @example PO-4711
+             */
+            purchase_order?: string;
+            /**
+             * @description Sales order reference (BT-14), `cac:OrderReference/cbc:SalesOrderID`:
+             *     the seller's own order number. Without `purchase_order`, the
+             *     `cbc:ID` of the order reference is `NA`.
+             * @example SO-88
+             */
+            sales_order?: string;
             /** @description Document-level allowances (BG-20) — deductions applied before tax. */
             allowances?: components["schemas"]["AllowanceCharge"][];
             /** @description Document-level charges (BG-21) — additions applied before tax. */
@@ -1700,8 +1714,19 @@ export interface components {
              */
             tax_id?: string;
             address?: components["schemas"]["Address"];
-            /** Format: email */
+            /**
+             * Format: email
+             * @description Contact email (BT-43 for `from`, BT-58 for `to`),
+             *     `cac:Contact/cbc:ElectronicMail`.
+             */
             email?: string;
+            /**
+             * @description Contact name (BT-41 for `from`, BT-56 for `to`),
+             *     `cac:Contact/cbc:Name`. Needs an `email` on the same party, else
+             *     the document is rejected with `invalid_document_body` (400).
+             * @example Ann Peeters
+             */
+            contact_name?: string;
             /**
              * @description Explicit Peppol participant ID (overrides tax_id lookup).
              *     Format: `scheme:id` — a 4-digit scheme, a colon, then a non-empty
@@ -1712,6 +1737,17 @@ export interface components {
              *     leading `BE` is normalized away.
              */
             peppol_id?: string;
+        };
+        /** @description The `to` party. A `Party` with a buyer identifier. */
+        RecipientParty: components["schemas"]["Party"] & {
+            /**
+             * @description Buyer identifier (BT-46), `cac:PartyIdentification/cbc:ID` with
+             *     no `schemeID`: the number of the buyer in your system. Only on
+             *     `to`: `from.identifier` is rejected with
+             *     `invalid_document_body` (400).
+             * @example CUST-007
+             */
+            identifier?: string;
         };
         /** @description A postal address. */
         Address: {
@@ -1777,7 +1813,22 @@ export interface components {
             number?: string;
             status?: components["schemas"]["DocumentStatus"];
             from?: components["schemas"]["PartyInfo"];
-            to?: components["schemas"]["PartyInfo"];
+            to?: components["schemas"]["RecipientPartyInfo"];
+            /**
+             * @description Buyer reference (BT-10). Present only when the document was
+             *     created with one.
+             */
+            buyer_reference?: string;
+            /**
+             * @description Purchase order reference (BT-13). Present only when the document
+             *     was created with one.
+             */
+            purchase_order?: string;
+            /**
+             * @description Sales order reference (BT-14). Present only when the document was
+             *     created with one.
+             */
+            sales_order?: string;
             lines?: components["schemas"]["LineItem"][];
             /**
              * @description Total amount without VAT (BT-109), max 2 decimals. Computed from
@@ -1860,11 +1911,27 @@ export interface components {
          * @enum {string}
          */
         DocumentStatus: "queued" | "sending" | "delivered" | "failed";
-        /** @description Resolved party identity as stored on a sent document. */
+        /**
+         * @description Resolved party identity as stored on a sent document. `email` and
+         *     `contact_name` are present only when the document was created with
+         *     them.
+         */
         PartyInfo: {
             name?: string;
             tax_id?: string;
             peppol_id?: string;
+            /** @description Contact email (BT-43 for `from`, BT-58 for `to`). */
+            email?: string;
+            /** @description Contact name (BT-41 for `from`, BT-56 for `to`). */
+            contact_name?: string;
+        };
+        /** @description The `to` party of a sent document. */
+        RecipientPartyInfo: components["schemas"]["PartyInfo"] & {
+            /**
+             * @description Buyer identifier (BT-46). Present only when the document was
+             *     created with one.
+             */
+            identifier?: string;
         };
         /** @description One status change in a document's delivery-history timeline. */
         DocumentEvent: {

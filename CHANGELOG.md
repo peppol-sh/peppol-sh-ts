@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-20
+
+### Added
+
+- `DocumentSendParams` has an optional `purchase_order` (BT-13,
+  `cac:OrderReference/cbc:ID`) and `sales_order` (BT-14,
+  `cac:OrderReference/cbc:SalesOrderID`). With a `sales_order` and no
+  `purchase_order`, the order reference ID is `NA` (#435).
+- `Party` has an optional `contact_name` (BT-41 for `from`, BT-56 for `to`)
+  and `identifier` (the buyer identifier, BT-46, only on `to`). A
+  `contact_name` needs an `email` on the same party, else the API answers
+  `400 invalid_document_body` with `param` `to.contact_name` (or
+  `from.contact_name`). A `from.identifier` gives `400 invalid_document_body`
+  with `param` `from.identifier` (#435).
+- `Document` (from `documents.get` and `documents.list`) has
+  `buyer_reference`, `purchase_order` and `sales_order`, and its `from` and
+  `to` have `email`, `contact_name` and (only `to`) `identifier`, when the
+  document was created with them (#435).
+
 ### Changed
 
 - The `event_type` of `AuditEvent` in the generated types has
@@ -42,6 +61,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The API now answers `400 invalid_body` (and not `500`) on `companies.create`
   and `companies.update` when the body is not valid JSON or not a JSON object
   (#418).
+- `buyer_reference` now goes only to `cbc:BuyerReference` (BT-10). The API no
+  longer copies it to `cac:OrderReference/cbc:ID` (BT-13): put the purchase
+  order number in `purchase_order`. Without `buyer_reference`, a document
+  gets `purchase_order`, else `to.identifier`, else `Unknown` as
+  BT-10 (#435).
+
+### Fixed
+
+- The `email` of a party (BT-43 for `from`, BT-58 for `to`) is now sent to the
+  Peppol network and is in the UBL. Before, the API accepted it and left it
+  out (#435).
 
 ## [0.5.0] - 2026-10-20
 
@@ -162,6 +192,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `kyc` — `get`, `uploadDocument`, `submit`.
 
 [Unreleased]: https://github.com/peppol-sh/peppol-sh-ts/commits/main
+[0.6.0]: https://github.com/peppol-sh/peppol-sh-ts/releases/tag/v0.6.0
 [0.5.0]: https://github.com/peppol-sh/peppol-sh-ts/releases/tag/v0.5.0
 [0.4.0]: https://github.com/peppol-sh/peppol-sh-ts/releases/tag/v0.4.0
 [0.3.0]: https://github.com/peppol-sh/peppol-sh-ts/releases/tag/v0.3.0
