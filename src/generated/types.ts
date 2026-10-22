@@ -474,7 +474,8 @@ export interface paths {
         };
         /**
          * List your companies
-         * @description Returns every company in the caller's workspace, newest first.
+         * @description Returns every company in the caller's workspace, newest first. A
+         *     company-scoped API key sees only its own company.
          *
          *     List items are a summary shape — they carry `is_live` and
          *     `workspace_id` but omit the address, registration id, email, IBAN,
@@ -528,7 +529,8 @@ export interface paths {
         /**
          * Get company details
          * @description Returns full details for a company. The calling account must be a
-         *     member of the company.
+         *     member of the company. A company-scoped API key gets
+         *     `403 key_company_scope` for any other company.
          */
         get: operations["getCompany"];
         put?: never;
@@ -3582,6 +3584,15 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            /** @description The API key is scoped to a different company (`key_company_scope`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorObject"];
+                };
+            };
             /** @description Company not found (or you are not a member) */
             404: {
                 headers: {
