@@ -285,6 +285,13 @@ and names the clean value in the message. A Belgian company without a
 `peppol_id` gets `0208:` plus its `company_registration_id` without dots and
 spaces.
 
+A VAT scheme (`99xx`) takes the VAT number with its country prefix, in the
+national format and with its check digit: `9930:DE123456788`, not the register
+number `9930:DEHRB135199B`. Greece (`9933`) takes the 9-digit TIN without
+`EL`. When `tax_id` is a valid VAT number of that scheme, the Peppol ID must be
+that VAT number: else the API returns `peppol_id_tax_id_mismatch` and names the
+Peppol ID to use.
+
 **`peppol.webhooks`**
 
 | Method | Endpoint | Purpose |

@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The docs of `CompanyCreate` and `CompanyUpdate` describe the format of a
+  VAT-scheme `peppol_id` (`99xx`): the VAT number with its country prefix and
+  check digit, `9933` without `EL`. A new error code,
+  `peppol_id_tax_id_mismatch`: a VAT-scheme Peppol ID that is not the VAT
+  number in `tax_id`. A register number in a VAT scheme gets a message that
+  says so (#454).
 - The docs of `CompanyCreate` and `CompanyUpdate` describe the characters of a
   `peppol_id`: 1 to 130 letters, digits, `-`, `.`, `_` or `~` after the colon,
   no whitespace, and 10 digits for `0208`. The API rejects
