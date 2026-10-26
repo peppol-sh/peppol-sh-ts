@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The docs of `CompanyCreate` and `CompanyUpdate` describe the characters of a
+  `peppol_id`: 1 to 130 letters, digits, `-`, `.`, `_` or `~` after the colon,
+  no whitespace, and 10 digits for `0208`. The API rejects
+  `0208:0410.086.603` with `invalid_peppol_id` and names the clean value (`Use
+  0208:0410086603.`); a Belgian default Peppol ID drops the dots and spaces of
+  the registration number (#375).
+
 ## [0.6.0] - 2026-10-20
 
 ### Added

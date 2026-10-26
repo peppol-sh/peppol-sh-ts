@@ -278,6 +278,13 @@ Nine namespaces hang off the client, one per `/v1` area.
 | `update(id, params)` | `PATCH /v1/companies/{id}` | Partial update; owners and admins only |
 | `delete(id)` | `DELETE /v1/companies/{id}` | Delete the company and its Peppol registration; owners only, cannot be undone. A `ps_test_` key deletes only a company that is not live |
 
+The `peppol_id` of a company is `scheme:id` with no whitespace and no
+separators that its scheme does not have: `0208:0410086603`, not
+`0208:0410.086.603`. The API rejects such a value with `invalid_peppol_id`
+and names the clean value in the message. A Belgian company without a
+`peppol_id` gets `0208:` plus its `company_registration_id` without dots and
+spaces.
+
 **`peppol.webhooks`**
 
 | Method | Endpoint | Purpose |

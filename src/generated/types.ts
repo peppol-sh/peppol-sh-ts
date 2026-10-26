@@ -495,14 +495,25 @@ export interface paths {
          *     `missing_field`.
          *
          *     **Peppol ID.** Send `peppol_id`, except for a Belgian company with a
-         *     `company_registration_id`: it defaults to `0208:<company_registration_id>`.
-         *     With no Peppol ID the request fails with `missing_peppol_id`. The Peppol
-         *     ID is checked against the OpenPeppol participant identifier scheme code
-         *     list: the scheme must be active, the identifier must have the format and
-         *     check digit of its scheme (`invalid_peppol_id`), and the scheme must
-         *     belong to `country` or be international, such as `0088` (GLN) or `0199`
-         *     (LEI) (`peppol_id_country_mismatch`). For example, a company in `GB`
-         *     uses `9932:GB123456789` (UK VAT number), not a Belgian `0208` number.
+         *     `company_registration_id`: it defaults to `0208:<company_registration_id>`,
+         *     without the dots and spaces of the registration number
+         *     (`0410.086.603` gives `0208:0410086603`). With no Peppol ID the request
+         *     fails with `missing_peppol_id`. The Peppol ID is checked against the
+         *     OpenPeppol participant identifier scheme code list: the scheme must be
+         *     active, the identifier must have the format and check digit of its
+         *     scheme (`invalid_peppol_id`), and the scheme must belong to `country` or
+         *     be international, such as `0088` (GLN) or `0199` (LEI)
+         *     (`peppol_id_country_mismatch`). For example, a company in `GB` uses
+         *     `9932:GB123456789` (UK VAT number), not a Belgian `0208` number.
+         *
+         *     The identifier after the colon has 1 to 130 characters: letters,
+         *     digits, `-`, `.`, `_` and `~` (Peppol Policy for use of Identifiers,
+         *     POLICY 1), and no whitespace anywhere. A scheme with its own format is
+         *     stricter: a `0208` identifier is a 10-digit enterprise number, and a
+         *     `9925` identifier is `BE` plus that number. Spaces and separators are
+         *     never removed for you: `0208:0410.086.603` fails with
+         *     `invalid_peppol_id`, and the message names the clean value
+         *     (`Use 0208:0410086603.`).
          *
          *     **Auto-provisioning.** In a workspace whose KYC status is already
          *     `approved`, creating a company **auto-provisions** its e-invoice.be
@@ -1218,12 +1229,16 @@ export interface components {
              * @description Peppol participant identifier in `scheme:id` form (e.g.
              *     `0208:0123456749`). Required, except for a Belgian company with a
              *     `company_registration_id`: it defaults to
-             *     `0208:<company_registration_id>`. Without one the request fails with
-             *     `missing_peppol_id`. The scheme must be active in the OpenPeppol
-             *     participant identifier scheme code list and the identifier must
-             *     have its format and check digit (`invalid_peppol_id`). The scheme
-             *     must belong to `country` or be international
-             *     (`peppol_id_country_mismatch`).
+             *     `0208:<company_registration_id>` without dots and spaces. Without
+             *     one the request fails with `missing_peppol_id`. The scheme must be
+             *     active in the OpenPeppol participant identifier scheme code list
+             *     and the identifier must have its format and check digit
+             *     (`invalid_peppol_id`). The identifier has 1 to 130 characters:
+             *     letters, digits, `-`, `.`, `_` and `~`, no whitespace; a `0208`
+             *     identifier is 10 digits (`0208:0410086603`, not
+             *     `0208:0410.086.603`) and a `9925` identifier is `BE` plus those
+             *     digits. The scheme must belong to `country` or be
+             *     international (`peppol_id_country_mismatch`).
              */
             peppol_id?: string;
             /** @description Company address. Optional. */
@@ -1256,8 +1271,9 @@ export interface components {
              *     before and after go-live: once the company's provider tenant is
              *     provisioned, a change is pushed to that tenant BEFORE it is stored,
              *     so the tenant always owns the Peppol ID it sends from. It is checked
-             *     as on create, against the company country after the update:
-             *     `invalid_peppol_id` or `peppol_id_country_mismatch`. A provider
+             *     as on create (characters, format, check digit), against the company
+             *     country after the update: `invalid_peppol_id` or
+             *     `peppol_id_country_mismatch`. A provider
              *     failure on the push returns `502 provider_update_failed` and leaves
              *     the value unchanged.
              */
@@ -3509,10 +3525,12 @@ export interface operations {
              * @description Validation error — `missing_field` (`name` or `country` omitted),
              *     `invalid_country` (country unknown or not Peppol-active),
              *     `missing_peppol_id` (no Peppol ID given and none can be derived),
-             *     `invalid_peppol_id` (not `scheme:id`; unknown, removed or deprecated
-             *     scheme; wrong format or check digit), or `peppol_id_country_mismatch`
-             *     (the scheme belongs to another country). The message names the
-             *     schemes to use instead.
+             *     `invalid_peppol_id` (not `scheme:id`; whitespace or a character that
+             *     Peppol does not permit; unknown, removed or deprecated scheme; wrong
+             *     format or check digit), or `peppol_id_country_mismatch` (the scheme
+             *     belongs to another country). The message names the schemes to use
+             *     instead, or the clean value when only spaces or separators are
+             *     wrong.
              */
             400: {
                 headers: {
@@ -3751,9 +3769,11 @@ export interface operations {
                 };
             };
             /**
-             * @description `no_fields_to_update`, `invalid_country`, `invalid_peppol_id`, or
-             *     `peppol_id_country_mismatch`. The Peppol ID is checked against the
-             *     company country after the update, so a request that changes only
+             * @description `no_fields_to_update`, `invalid_country`, `invalid_peppol_id` (as on
+             *     create, with the clean value in the message when only spaces or
+             *     separators are wrong), or `peppol_id_country_mismatch`. The
+             *     Peppol ID is checked against the company country after the
+             *     update, so a request that changes only
              *     `country` to another value re-checks the stored Peppol ID.
              */
             400: {
