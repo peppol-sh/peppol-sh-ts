@@ -1666,16 +1666,37 @@ export interface components {
              *     `credit_note`.
              *
              *     The value must be from `0` up to the document total with VAT
-             *     (BT-112), with at most two decimals. A value above the total is
-             *     refused with a 422 `amount_due_exceeds_total`. The prepaid amount
-             *     (BT-113, `cbc:PrepaidAmount`) is not an input: it is the total
-             *     with VAT less `amount_due`.
+             *     (BT-112) plus `rounding_amount`, with at most two decimals. A value
+             *     above that is refused with a 422 `amount_due_exceeds_total`. The
+             *     prepaid amount (BT-113, `cbc:PrepaidAmount`) is not an input: it is
+             *     the total with VAT plus `rounding_amount` less `amount_due`.
              *
-             *     If you omit the field, the amount due is the total with VAT and
-             *     the document has no prepaid amount.
+             *     If you omit the field, the amount due is the total with VAT plus
+             *     `rounding_amount`, and the document has no prepaid amount.
              * @example 0
              */
             amount_due?: number;
+            /**
+             * @description Rounding amount (BT-114, `cbc:PayableRoundingAmount`), in the
+             *     document currency: the signed amount that rounds the amount due,
+             *     for example to whole kronor. Allowed on both `invoice` and
+             *     `credit_note`, for any seller country and currency.
+             *
+             *     The amount due (BT-115) is the total with VAT (BT-112) less the
+             *     prepaid amount (BT-113) plus `rounding_amount`. `total` does not
+             *     include it. With an `amount_due`, send the rounded amount: an
+             *     `amount_due` equal to the total, with a rounding that is not `0`,
+             *     is refused with a 422 `amount_due_excludes_rounding` when the
+             *     rounding is positive, and with a 422 `amount_due_exceeds_total`
+             *     when it is negative.
+             *
+             *     The value has at most two decimals and must be below `1.00` either
+             *     way. A value of `1.00` or more, or one that takes the total below
+             *     `0`, is refused with a 422 `rounding_amount_out_of_range`. With `0`
+             *     the document has no rounding amount in the UBL.
+             * @example -0.6
+             */
+            rounding_amount?: number;
         };
         /**
          * @description A document- or line-level allowance or charge. The sign is fixed by
@@ -1935,12 +1956,20 @@ export interface components {
             /**
              * @description Amount due for payment (BT-115). Present only when the document
              *     was created with one; otherwise the field is omitted and the
-             *     amount due is the document total with VAT. The prepaid amount
-             *     (BT-113) is the document total with VAT (BT-112) less
-             *     `amount_due`. `total` does not change when a document has an
-             *     `amount_due`.
+             *     amount due is the document total with VAT plus `rounding_amount`.
+             *     The prepaid amount
+             *     (BT-113) is the document total with VAT (BT-112) plus
+             *     `rounding_amount` less `amount_due`. `total` does not change when
+             *     a document has an `amount_due`.
              */
             amount_due?: number;
+            /**
+             * @description Rounding amount (BT-114), signed. Present only when the document
+             *     was created with one, also when it is `0`; otherwise the field is
+             *     omitted. `total` does not include it, and `amount_due` stays as
+             *     sent.
+             */
+            rounding_amount?: number;
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */
@@ -2294,7 +2323,9 @@ export interface components {
          *     | validation_error | `invalid_scheme` | Peppol scheme (EAS) is unknown. |
          *     | validation_error | `invalid_body` | The request body could not be read (for example, it is not valid JSON). |
          *     | validation_error | `invalid_document_body` | A document field is missing or has an invalid value. `param` is its dot-path, for example `from.tax_id`. |
-         *     | validation_error | `amount_due_exceeds_total` | 422 — `amount_due` is more than the document total with VAT. |
+         *     | validation_error | `amount_due_exceeds_total` | 422 — `amount_due` is more than the document total with VAT plus `rounding_amount`. |
+         *     | validation_error | `amount_due_excludes_rounding` | 422 — `amount_due` equals the document total with VAT, but the document has a positive `rounding_amount`. |
+         *     | validation_error | `rounding_amount_out_of_range` | 422 — `rounding_amount` is `1.00` or more either way, or takes the document total below `0`. |
          *     | validation_error | `batch_too_large` | Batch contains more than 100 documents. |
          *     | validation_error | `mixed_company_ids` | Batch mixes multiple `company_id`s. |
          *     | validation_error | `idempotency_key_mismatch` | The `Idempotency-Key` header and the `idempotency_key` body field carry different keys. |
