@@ -158,6 +158,54 @@ describe("documents.send() with amount_due", () => {
   });
 });
 
+describe("documents.send() with payment_means.accounts", () => {
+  it("sends a bankgiro and an IBAN account unchanged in the body", async () => {
+    const paymentMeans = {
+      method: "bank_transfer",
+      reference: "12345678",
+      accounts: [
+        { type: "bankgiro", number: "5555-5555" },
+        {
+          type: "iban",
+          number: "SE4550000000058398257466",
+          bic: "ESSESESS",
+        },
+      ],
+    } satisfies DocumentSendParams["payment_means"];
+    const { fetch, peppol } = client(jsonResponse(ACCEPTED, 202));
+
+    await peppol.documents.send({
+      ...SEND_PARAMS,
+      payment_means: paymentMeans,
+    });
+
+    expect(JSON.parse(fetch.calls[0].body as string).payment_means).toEqual({
+      method: "bank_transfer",
+      reference: "12345678",
+      accounts: [
+        { type: "bankgiro", number: "5555-5555" },
+        {
+          type: "iban",
+          number: "SE4550000000058398257466",
+          bic: "ESSESESS",
+        },
+      ],
+    });
+  });
+});
+
+describe("documents.send() with rounding_amount", () => {
+  it("sends a negative rounding amount unchanged in the body", async () => {
+    const { fetch, peppol } = client(jsonResponse(ACCEPTED, 202));
+
+    await peppol.documents.send({ ...SEND_PARAMS, rounding_amount: -0.6 });
+
+    expect(JSON.parse(fetch.calls[0].body as string).rounding_amount).toBe(
+      -0.6,
+    );
+  });
+});
+
 describe("documents.sendBatch()", () => {
   it("POSTs the array to /v1/documents/batch and returns one result per input", async () => {
     const failure = {

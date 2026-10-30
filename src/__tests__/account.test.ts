@@ -49,7 +49,7 @@ describe("signup()", () => {
 
     expect(fetch.calls[0].headers.get("authorization")).toBeNull();
     expect(fetch.calls[0].headers.get("x-peppol-sdk")).toBe(
-      "@peppol-sh/sdk/0.6.0",
+      "@peppol-sh/sdk/0.7.0",
     );
   });
 });

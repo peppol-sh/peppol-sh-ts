@@ -91,6 +91,29 @@ number in `sales_order` (BT-14). A party can have an `email` and a
 `contact_name` (the name needs the email), and `to` can have an `identifier`:
 the number of the buyer in your system (BT-46).
 
+For a bankgiro or plusgiro number, or for more than one account, use
+`payment_means.accounts`, with `method` `bank_transfer`. `iban` and `bic` are the older form of one IBAN
+account: they give a 400 together with `accounts`. `rounding_amount` (BT-114)
+is the signed amount that rounds the amount due, for example to whole kronor.
+It is below `1.00` either way, and `total` does not include it. With an
+`amount_due`, send the rounded amount.
+
+```ts
+await peppol.documents.send({
+  ...swedishInvoice, // total with VAT: 1000.40 SEK
+  currency: "SEK",
+  payment_means: {
+    method: "bank_transfer",
+    reference: "12345678",
+    accounts: [
+      { type: "bankgiro", number: "5555-5555" },
+      { type: "iban", number: "SE4550000000058398257466", bic: "ESSESESS" },
+    ],
+  },
+  rounding_amount: -0.4, // amount due: 1000.00 SEK
+});
+```
+
 Sending is asynchronous. Read the document back for its current status, or
 subscribe to [webhooks](#webhooks) instead of polling.
 

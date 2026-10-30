@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-30
+
+### Added
+
+- `payment_means` on `documents.send`, `documents.sendBatch` and
+  `validate.document` has an optional `accounts`: one to ten accounts of type
+  `iban`, `bankgiro`, `plusgiro` or `other`, with the same reference. `method`
+  must be `bank_transfer`. On a send, `iban` and `bic` give a 400 together
+  with `accounts`; `validate.document` returns that as `valid: false` (#414).
+- `DocumentSendParams` and `ValidateDocumentParams` have an optional
+  `rounding_amount` (BT-114, `cbc:PayableRoundingAmount`): the signed amount
+  that rounds the amount due, below `1.00` either way. `total` does not
+  include it. New error codes on a send:
+  `rounding_amount_out_of_range` and `amount_due_excludes_rounding` (#415).
+
 ### Changed
 
 - The docs of `CompanyCreate` and `CompanyUpdate` describe the format of a
@@ -207,6 +222,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `kyc` — `get`, `uploadDocument`, `submit`.
 
 [Unreleased]: https://github.com/peppol-sh/peppol-sh-ts/commits/main
+[0.7.0]: https://github.com/peppol-sh/peppol-sh-ts/releases/tag/v0.7.0
 [0.6.0]: https://github.com/peppol-sh/peppol-sh-ts/releases/tag/v0.6.0
 [0.5.0]: https://github.com/peppol-sh/peppol-sh-ts/releases/tag/v0.5.0
 [0.4.0]: https://github.com/peppol-sh/peppol-sh-ts/releases/tag/v0.4.0
