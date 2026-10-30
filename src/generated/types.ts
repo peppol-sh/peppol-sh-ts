@@ -1819,9 +1819,30 @@ export interface components {
             /** @description Line-level charges (BG-28) — additions to the line net. */
             charges?: components["schemas"]["AllowanceCharge"][];
         };
-        /** @description How the document should be paid (method and bank details). */
+        /**
+         * @description How the document should be paid: one method, one reference, and one or
+         *     more accounts. Use `accounts` for a bankgiro or plusgiro number or for
+         *     more than one account. `iban` and `bic` are the older form of one
+         *     `iban` account: they give a 400 together with `accounts`.
+         * @example {
+         *       "method": "bank_transfer",
+         *       "reference": "12345678",
+         *       "accounts": [
+         *         {
+         *           "type": "bankgiro",
+         *           "number": "5555-5555"
+         *         },
+         *         {
+         *           "type": "iban",
+         *           "number": "SE4550000000058398257466",
+         *           "bic": "ESSESESS"
+         *         }
+         *       ]
+         *     }
+         */
         PaymentMeans: {
             /**
+             * @description Must be `bank_transfer` when `accounts` is present.
              * @default bank_transfer
              * @enum {string}
              */
@@ -1830,6 +1851,21 @@ export interface components {
             bic?: string;
             /** @description Payment reference / structured communication */
             reference?: string;
+            /** @description The accounts the buyer can pay to, with the same method and reference. */
+            accounts?: components["schemas"]["PaymentAccount"][];
+        };
+        /** @description One account a document can be paid to. */
+        PaymentAccount: {
+            /** @enum {string} */
+            type: "iban" | "bankgiro" | "plusgiro" | "other";
+            /**
+             * @description Payment account identifier (BT-84). Spaces and `-` are removed.
+             *     `bankgiro`: 7 or 8 digits. `plusgiro`: 2 to 8 digits. `iban`: 15 to
+             *     34 characters that start with 2 letters.
+             */
+            number: string;
+            /** @description BIC (BT-86). Only for `iban` and `other`. */
+            bic?: string;
         };
         /** @description A file to embed with the document, as base64 content. */
         Attachment: {
