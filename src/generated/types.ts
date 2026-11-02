@@ -610,7 +610,11 @@ export interface paths {
          *     **Requires `company_id`** — the company whose provider credentials
          *     will be used. The calling account must be a member of that company.
          *
-         *     - With `ps_test_` keys: delivered via email (sandbox)
+         *     - With `ps_test_` keys: the sandbox runs the checks of a live send
+         *       (the schema, the Peppol IDs, the sender is the company, the totals
+         *       and Peppol BIS 3.0, the receiver is on the Peppol network), then
+         *       simulates the delivery. See Sandbox in the introduction. Test with
+         *       the sandbox test receiver `0208:1234567894`.
          *     - With `ps_live_` keys: delivered via Peppol network (production)
          *
          *     To make a retry safe, send an `Idempotency-Key` header (or the
@@ -868,6 +872,11 @@ export interface paths {
          *     (e.g. `BR-S-02`) and no `path`. An issue in the request body itself has
          *     a dot-path in `path` (e.g. `to.tax_id`, `lines[0].unit_price`) so SDK
          *     clients can highlight the right form field.
+         *
+         *     A sandbox send (`POST /v1/documents` with a `ps_test_` key) runs this
+         *     same validation, so a document that is `valid` here passes the Peppol
+         *     BIS 3.0 check of the sandbox. Only a send checks the sender and that
+         *     the receiver is registered on the Peppol network.
          */
         post: operations["validateDocument"];
         delete?: never;
@@ -2010,7 +2019,9 @@ export interface components {
             credits_remaining?: number;
         };
         /**
-         * @description Delivery status of a document.
+         * @description Delivery status of a document. A sandbox document has the same
+         *     statuses, but it is `delivered` or `failed` within seconds: there is
+         *     no wait for the Peppol network.
          * @enum {string}
          */
         DocumentStatus: "queued" | "sending" | "delivered" | "failed";
@@ -4312,7 +4323,11 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorObject"];
                 };
             };
-            /** @description SMP or DNS error */
+            /**
+             * @description `smp_error`: the DNS lookup or the SMP failed, for example when
+             *     the DNS resolver answers with an error (SERVFAIL). It does not
+             *     say that the participant is missing. Retry later.
+             */
             502: {
                 headers: {
                     [name: string]: unknown;
@@ -4369,7 +4384,11 @@ export interface operations {
                 };
             };
             429: components["responses"]["RateLimited"];
-            /** @description DNS resolution error */
+            /**
+             * @description `smp_error`: the DNS lookup failed, for example when the DNS
+             *     resolver answers with an error (SERVFAIL). It does not say that
+             *     the participant is missing. Retry later.
+             */
             502: {
                 headers: {
                     [name: string]: unknown;

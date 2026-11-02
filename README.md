@@ -61,9 +61,15 @@ const invoice = await peppol.documents.send({
     },
   },
   to: {
-    name: "Globex NV",
-    tax_id: "BE0987654394",
-    peppol_id: "0208:0987654394",
+    name: "Sandbox Test Receiver",
+    tax_id: "BE1234567894",
+    peppol_id: "0208:1234567894", // the sandbox test receiver
+    address: {
+      street: "Teststraat 1",
+      city: "Brussels",
+      postal_code: "1000",
+      country: "BE",
+    },
   },
   lines: [
     {
@@ -84,6 +90,12 @@ console.log(invoice.id, invoice.status, invoice.url);
 
 A party needs a `tax_id`, a `peppol_id`, or both. A party with no VAT number
 (for example a Norwegian company) can have only a `peppol_id`.
+
+A sandbox send runs the checks of a live send: `from` must be the company of
+`company_id`, the document must pass Peppol BIS 3.0 (`validate.document`), and
+the receiver must be registered on the Peppol network. If a check fails, the
+document becomes `failed`. Send sandbox documents to the sandbox test receiver
+`0208:1234567894` (VAT number `BE1234567894`), and only sandbox documents.
 
 `buyer_reference` (BT-10) is the reference the buyer asks for. Put the number
 of the buyer's purchase order in `purchase_order` (BT-13) and your own order
@@ -134,7 +146,7 @@ carry their environment in the prefix.
 
 | Key prefix | Base URL | Delivery |
 | --- | --- | --- |
-| `ps_test_` | `https://sandbox.peppol.sh` | Sandbox — delivered by email, never touches the real Peppol network |
+| `ps_test_` | `https://sandbox.peppol.sh` | Sandbox — the checks of a live send, then no Peppol delivery; the receiver is checked on the SML |
 | `ps_live_` | `https://api.peppol.sh` (default) | Production — delivered over Peppol |
 
 `baseUrl` defaults to `https://api.peppol.sh`, so a sandbox key needs the
@@ -397,6 +409,7 @@ const draft: DocumentSendParams = {
   type: "invoice",
   number: "INV-2026-002",
   issue_date: "2026-03-02",
+  due_date: "2026-04-01",
   currency: "EUR",
   from: { name: "Acme BV", tax_id: "BE0123456749" },
   to: { name: "Globex NV", tax_id: "BE0987654394" },

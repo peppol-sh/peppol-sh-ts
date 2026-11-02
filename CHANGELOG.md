@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- A sandbox send (`documents.send` and `documents.sendBatch` with a
+  `ps_test_` key) now runs the checks of a live send, in the same order. The
+  API answers `202` as before; then the document becomes `failed` when:
+  1. a field does not have the form that the Peppol network takes: "The
+     document failed Peppol BIS 3.0 validation: …";
+  2. no Peppol ID follows for the sender or the receiver: "The Peppol ID of
+     the sender or the receiver could not be found. …";
+  3. the `from` is not the company of `company_id` (a `from.peppol_id`, or a
+     VAT number in `from.tax_id`, that gives another Peppol ID): "The sender
+     Peppol ID … is not registered for this company";
+  4. the totals or the Peppol BIS 3.0 rules fail, as in `validate.document`:
+     "The document failed Peppol BIS 3.0 validation: …". A document with an
+     amount due and no `due_date` fails rule BR-CO-25;
+  5. the receiver is not registered on the Peppol network: "The document could
+     not be delivered over the Peppol network."
+
+  The reason is the `message` of the `failed` event in `documents.get` and
+  `documents.history`. Send from your company, set a `due_date`, and send to
+  the sandbox test receiver `0208:1234567894` (VAT number `BE1234567894`).
+  The checks call the Peppol network, so a sandbox send can also end in
+  `provider_unavailable`, `rate_limited` or `provider_error`.
+- `documents.ubl` of a sandbox document gives the UBL rendered by the
+  validator of `validate.document` (a local render when that validator is
+  unavailable).
+- `lookup.participant` and `lookup.dns` throw `PeppolServerError` (status
+  `502`, code `smp_error`) when the DNS resolver fails, instead of
+  `PeppolNotFoundError`.
+- The generated types describe the sandbox checks, the sandbox test receiver
+  (`documents.send`, `validate.document`, `DocumentStatus`) and the `502` of
+  `lookup.participant` and `lookup.dns`.
+- The README quickstart sends to the sandbox test receiver, with a
+  `due_date`.
+
 ## [0.7.0] - 2026-10-30
 
 ### Added
