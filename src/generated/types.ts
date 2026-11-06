@@ -2369,6 +2369,11 @@ export interface components {
          *     | validation_error | `kyc_attestation_incomplete` | 422 — `attestation_name` or `attestation_role` was blank. |
          *     | validation_error | `kyc_attestation_not_accepted` | 422 — `attested` was not `true`. |
          *     | validation_error | `kyc_attestation_version_mismatch` | 422 — `attestation_version` is not the current version. |
+         *     | validation_error | `top_up_no_kyc_company` | 422 — `POST /v1/billing/checkout`: the KYC-approved workspace has no KYC company. |
+         *     | validation_error | `top_up_no_eu_country` | 422 — `POST /v1/billing/checkout`: the KYC company is not in the EU. |
+         *     | validation_error | `top_up_no_vat_number` | 422 — `POST /v1/billing/checkout`: the KYC company has no VAT number. |
+         *     | validation_error | `top_up_vat_number_invalid` | 422 — `POST /v1/billing/checkout`: VIES says the VAT number of the KYC company is not valid. |
+         *     | validation_error | `top_up_vat_country_mismatch` | 422 — `POST /v1/billing/checkout`: the VAT number's member state is not the country of the KYC company. |
          *     | not_found | `company_not_found` | Company does not exist or caller cannot see it. |
          *     | not_found | `workspace_not_found` | Workspace row not found. |
          *     | not_found | `webhook_not_found` | Webhook not found in the caller's workspace. |
@@ -2381,6 +2386,7 @@ export interface components {
          *     | provider_error | `provider_error` | Upstream provider returned an unexpected error. |
          *     | provider_error | `provider_validation_failed` | Upstream provider rejected the payload (see `details`). |
          *     | provider_error | `smp_error` | SMP or DNS lookup failed. |
+         *     | provider_error | `vat_check_unavailable` | 503 — `POST /v1/billing/checkout`: VIES is not available and there is no valid VIES result of the last 30 days. Try again later. |
          *     | rate_limit_error | `rate_limit_exceeded` | Too many requests. Wait for the `Retry-After` time, then retry. |
          *     | billing_error | `insufficient_credits` | Company does not have enough credits to send the document(s). Purchase more via `POST /v1/billing/checkout`. |
          *     | billing_error | `sandbox_not_allowed` | Billing endpoints (e.g. `POST /v1/billing/checkout`) reject sandbox API keys. |
