@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- A document whose sender is not the company is now refused at once.
+  `documents.send` throws `PeppolValidationError` (status `422`, code
+  `sender_not_registered`, `param` `from.peppol_id` or `from.tax_id`) for a
+  `ps_test_` and a `ps_live_` key. Before, the API answered `202` and the
+  document became `failed`. No credit is charged and no document is made.
+  `documents.sendBatch` gives the error for that item in its result.
+  `validate.document` gives `valid: false` with an entry in `errors`
+  (`code` `sender_not_registered`, `path` the field). The rule: a
+  `from.peppol_id` must be the Peppol ID of the company; a VAT number or a
+  `scheme:id` in `from.tax_id` must give that Peppol ID or be the company's
+  own `tax_id`. A `from` with neither sends as the company. A document can
+  still become `failed` with this message when the Peppol ID of the company
+  changes between the `202` and the send.
 - A sandbox send (`documents.send` and `documents.sendBatch` with a
   `ps_test_` key) now runs the checks of a live send, in the same order. The
   API answers `202` as before; then the document becomes `failed` when:
@@ -16,13 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
      document failed Peppol BIS 3.0 validation: …";
   2. no Peppol ID follows for the sender or the receiver: "The Peppol ID of
      the sender or the receiver could not be found. …";
-  3. the `from` is not the company of `company_id` (a `from.peppol_id`, or a
-     VAT number in `from.tax_id`, that gives another Peppol ID): "The sender
-     Peppol ID … is not registered for this company";
-  4. the totals or the Peppol BIS 3.0 rules fail, as in `validate.document`:
+  3. the totals or the Peppol BIS 3.0 rules fail, as in `validate.document`:
      "The document failed Peppol BIS 3.0 validation: …". A document with an
      amount due and no `due_date` fails rule BR-CO-25;
-  5. the receiver is not registered on the Peppol network: "The document could
+  4. the receiver is not registered on the Peppol network: "The document could
      not be delivered over the Peppol network."
 
   The reason is the `message` of the `failed` event in `documents.get` and

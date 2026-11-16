@@ -611,11 +611,18 @@ export interface paths {
          *     will be used. The calling account must be a member of that company.
          *
          *     - With `ps_test_` keys: the sandbox runs the checks of a live send
-         *       (the schema, the Peppol IDs, the sender is the company, the totals
-         *       and Peppol BIS 3.0, the receiver is on the Peppol network), then
-         *       simulates the delivery. See Sandbox in the introduction. Test with
-         *       the sandbox test receiver `0208:1234567894`.
+         *       (the schema, the Peppol IDs, the totals and Peppol BIS 3.0, the
+         *       receiver is on the Peppol network), then simulates the delivery.
+         *       See Sandbox in the introduction. Test with the sandbox test
+         *       receiver `0208:1234567894`.
          *     - With `ps_live_` keys: delivered via Peppol network (production)
+         *
+         *     The sender in `from` must be the company of `company_id`, for both
+         *     key modes. If it is not, the response is a `422` with the code
+         *     `sender_not_registered` and `param` `from.peppol_id` or
+         *     `from.tax_id`. No credit is charged, no document is made. A `from`
+         *     with no `peppol_id`, and no VAT number or `scheme:id` in `tax_id`,
+         *     sends as the company. See Sandbox in the introduction for the rule.
          *
          *     To make a retry safe, send an `Idempotency-Key` header (or the
          *     `idempotency_key` body field, which is the same key).
@@ -649,6 +656,10 @@ export interface paths {
          *     `idempotency_key` on each document. An item whose key was already
          *     accepted gets the `id` and `url` of the existing document and does
          *     not cost a credit.
+         *
+         *     An item whose sender in `from` is not the company gets an error
+         *     object with the code `sender_not_registered` in the response array,
+         *     as in `POST /v1/documents`. It does not cost a credit.
          */
         post: operations["sendDocumentBatch"];
         delete?: never;
@@ -875,8 +886,13 @@ export interface paths {
          *
          *     A sandbox send (`POST /v1/documents` with a `ps_test_` key) runs this
          *     same validation, so a document that is `valid` here passes the Peppol
-         *     BIS 3.0 check of the sandbox. Only a send checks the sender and that
-         *     the receiver is registered on the Peppol network.
+         *     BIS 3.0 check of the sandbox. Only a send checks that the receiver is
+         *     registered on the Peppol network.
+         *
+         *     The sender is checked as in `POST /v1/documents`. A sender in `from`
+         *     that is not the company gives `valid: false` and an entry in `errors`
+         *     with `path` `from.peppol_id` or `from.tax_id` and `code`
+         *     `sender_not_registered`.
          */
         post: operations["validateDocument"];
         delete?: never;
@@ -1778,7 +1794,10 @@ export interface components {
              *     not sent as one, and the party then needs a `peppol_id`. For
              *     `from`, the Peppol ID of the company is used when `peppol_id` is
              *     absent. If no Peppol ID can be found, the send fails with
-             *     `sender_not_derivable`.
+             *     `sender_not_derivable`. For `from`, a VAT number or a `scheme:id`
+             *     must give the Peppol ID of the company or be the company's own
+             *     `tax_id`, else the document is rejected with
+             *     `sender_not_registered` (422).
              */
             tax_id?: string;
             address?: components["schemas"]["Address"];
@@ -1802,7 +1821,9 @@ export interface components {
              *     is rejected synchronously with `invalid_peppol_id` (422) instead of
              *     failing later at the provider. Scheme `0208` (BE enterprise number)
              *     must be a 10-digit CBE number with a valid mod-97 checksum; a
-             *     leading `BE` is normalized away.
+             *     leading `BE` is normalized away. For `from`, it must be the
+             *     Peppol ID of the company, else the document is rejected with
+             *     `sender_not_registered` (422).
              */
             peppol_id?: string;
         };
@@ -2229,8 +2250,9 @@ export interface components {
             /**
              * @description Machine-readable issue code: the Peppol validation rule id (e.g.
              *     `BR-S-02`), our own code for a request body issue (e.g.
-             *     `invalid_document_body`), or `invalid_document` when the provider
-             *     rejects the document without a rule id.
+             *     `invalid_document_body`, `sender_not_registered`), or
+             *     `invalid_document` when the provider rejects the document without
+             *     a rule id.
              */
             code?: string;
             /** @description Human-readable description of the issue. */
@@ -2331,6 +2353,7 @@ export interface components {
          *     | validation_error | `missing_peppol_id` | 400 — a company needs a Peppol ID and none was given or derived. |
          *     | validation_error | `peppol_id_country_mismatch` | 400 — the Peppol ID scheme belongs to another country than the company. |
          *     | validation_error | `peppol_id_tax_id_mismatch` | 400 — a VAT-scheme Peppol ID is not the VAT number in the `tax_id` of the company. The message names the Peppol ID to use. |
+         *     | validation_error | `sender_not_registered` | 422 — `POST /v1/documents`: the sender in `from` is not the company of `company_id`. `param` is `from.peppol_id` or `from.tax_id`. No `details`. Give the Peppol ID of the company or its own VAT number, or give neither. |
          *     | validation_error | `invalid_scheme` | Peppol scheme (EAS) is unknown. |
          *     | validation_error | `invalid_body` | The request body could not be read (for example, it is not valid JSON). |
          *     | validation_error | `invalid_document_body` | A document field is missing or has an invalid value. `param` is its dot-path, for example `from.tax_id`. |
@@ -4044,7 +4067,19 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorObject"];
                 };
             };
-            422: components["responses"]["ValidationError"];
+            /**
+             * @description Payload validation failed. `sender_not_registered`: the sender in
+             *     `from` is not the company of `company_id`; `param` is
+             *     `from.peppol_id` or `from.tax_id`.
+             */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorObject"];
+                };
+            };
             429: components["responses"]["RateLimited"];
         };
     };
