@@ -146,6 +146,41 @@ describe("documents.send()", () => {
       identifier: "CUST-007",
     });
   });
+
+  it("sends the contact phone of the seller and of the buyer in the body", async () => {
+    const { fetch, peppol } = client(jsonResponse(ACCEPTED, 202));
+
+    await peppol.documents.send({
+      ...SEND_PARAMS,
+      from: {
+        name: "Acme GmbH",
+        tax_id: "DE123456789",
+        email: "billing@acme.example",
+        contact_name: "Jan Janssens",
+        phone: "+49 30 1234567",
+      },
+      // A phone needs no email on the same party.
+      to: {
+        name: "Client GmbH",
+        tax_id: "DE987654321",
+        phone: "+49 89 7654321",
+      },
+    });
+
+    const body = JSON.parse(fetch.calls[0].body as string);
+    expect(body.from).toEqual({
+      name: "Acme GmbH",
+      tax_id: "DE123456789",
+      email: "billing@acme.example",
+      contact_name: "Jan Janssens",
+      phone: "+49 30 1234567",
+    });
+    expect(body.to).toEqual({
+      name: "Client GmbH",
+      tax_id: "DE987654321",
+      phone: "+49 89 7654321",
+    });
+  });
 });
 
 describe("documents.send() with amount_due", () => {

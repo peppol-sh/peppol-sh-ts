@@ -101,7 +101,10 @@ document becomes `failed`. Send sandbox documents to the sandbox test receiver
 of the buyer's purchase order in `purchase_order` (BT-13) and your own order
 number in `sales_order` (BT-14). A party can have an `email` and a
 `contact_name` (the name needs the email), and `to` can have an `identifier`:
-the number of the buyer in your system (BT-46).
+the number of the buyer in your system (BT-46). A party can also have a
+`phone` (BT-42 for `from`, BT-57 for `to`); it needs no email. When seller and
+buyer are both in Germany, Peppol requires `from.phone` together with
+`from.contact_name` and `from.email` (rule DE-R-006).
 
 For a bankgiro or plusgiro number, or for more than one account, use
 `payment_means.accounts`, with `method` `bank_transfer`. `iban` and `bic` are the older form of one IBAN

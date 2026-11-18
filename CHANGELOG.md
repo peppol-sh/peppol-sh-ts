@@ -7,8 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-18
+
+### Added
+
+- `Party` (`from` and `to` of `documents.send`, `documents.sendBatch` and
+  `validate.document`) has an optional `phone`: the contact phone (BT-42 for
+  `from`, BT-57 for `to`). It needs no `email`. It is trimmed and must then
+  have 1 to 100 characters; the format is not checked. Peppol requires
+  `from.phone` when seller and buyer are both in Germany (rule DE-R-006),
+  together with `contact_name` and `email`. Before this release the API
+  accepted the field but did not send it to the receiver (#571).
+- `Document` (from `documents.get`) has `phone` on its `from` and `to`, when
+  the document was created with it (#571).
+
 ### Changed
 
+- A `phone` on `from` or `to` now has a rule. Before, the API took any value
+  and did not use it. Now the value must be a string of 1 to 100 characters
+  after trimming: `documents.send` throws `PeppolValidationError`
+  (status `400`, code `invalid_document_body`, `param` `from.phone` or
+  `to.phone`) for a blank string or a value of another type.
 - The API now answers `400 invalid_body` (and not `500`) when the body is
   not valid JSON or not a JSON object, on every route that reads a JSON
   body. This includes `POST /v1/signup`, `webhooks.create`,
@@ -288,6 +307,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `kyc` — `get`, `uploadDocument`, `submit`.
 
 [Unreleased]: https://github.com/peppol-sh/peppol-sh-ts/commits/main
+[0.8.0]: https://github.com/peppol-sh/peppol-sh-ts/releases/tag/v0.8.0
 [0.7.0]: https://github.com/peppol-sh/peppol-sh-ts/releases/tag/v0.7.0
 [0.6.0]: https://github.com/peppol-sh/peppol-sh-ts/releases/tag/v0.6.0
 [0.5.0]: https://github.com/peppol-sh/peppol-sh-ts/releases/tag/v0.5.0

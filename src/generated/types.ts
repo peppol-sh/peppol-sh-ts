@@ -1829,6 +1829,16 @@ export interface components {
              */
             contact_name?: string;
             /**
+             * @description Contact phone (BT-42 for `from`, BT-57 for `to`),
+             *     `cac:Contact/cbc:Telephone`. Needs no `email`. It is trimmed and
+             *     must then have 1 to 100 characters, else the document is rejected
+             *     with `invalid_document_body` (400). The format is not checked.
+             *     On `from`: Required by Peppol when seller and buyer are both in
+             *     Germany (DE-R-006), together with `contact_name` and `email`.
+             * @example +49 30 1234567
+             */
+            phone?: string;
+            /**
              * @description Explicit Peppol participant ID (overrides tax_id lookup).
              *     Format: `scheme:id` — a 4-digit scheme, a colon, then a non-empty
              *     id (e.g., `0208:0785666049`). Validated at ingest: a malformed id
@@ -2065,9 +2075,9 @@ export interface components {
          */
         DocumentStatus: "queued" | "sending" | "delivered" | "failed";
         /**
-         * @description Resolved party identity as stored on a sent document. `email` and
-         *     `contact_name` are present only when the document was created with
-         *     them.
+         * @description Resolved party identity as stored on a sent document. `email`,
+         *     `contact_name` and `phone` are present only when the document was
+         *     created with them.
          */
         PartyInfo: {
             name?: string;
@@ -2077,6 +2087,8 @@ export interface components {
             email?: string;
             /** @description Contact name (BT-41 for `from`, BT-56 for `to`). */
             contact_name?: string;
+            /** @description Contact phone (BT-42 for `from`, BT-57 for `to`). */
+            phone?: string;
         };
         /** @description The `to` party of a sent document. */
         RecipientPartyInfo: components["schemas"]["PartyInfo"] & {
