@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Peppol, PeppolNotFoundError } from "../index";
+import { Peppol, PeppolNotFoundError, PeppolValidationError } from "../index";
 import type {
   DocumentAccepted,
   DocumentSendParams,
@@ -203,6 +203,44 @@ describe("documents.send() with rounding_amount", () => {
     expect(JSON.parse(fetch.calls[0].body as string).rounding_amount).toBe(
       -0.6,
     );
+  });
+});
+
+describe("documents.send() with currency", () => {
+  it("sends the currency unchanged in the body", async () => {
+    const { fetch, peppol } = client(jsonResponse(ACCEPTED, 202));
+
+    await peppol.documents.send({ ...SEND_PARAMS, currency: "SEK" });
+
+    expect(JSON.parse(fetch.calls[0].body as string).currency).toBe("SEK");
+  });
+
+  it("surfaces the 422 of a currency that cannot be sent as a PeppolValidationError", async () => {
+    const { peppol } = client(
+      jsonResponse(
+        {
+          error: {
+            type: "validation_error",
+            code: "unsupported_currency",
+            message:
+              "currency: PLN is not supported; must be one of EUR, USD, GBP, JPY, CHF, CAD, AUD, NZD, CNY, INR, SEK, NOK, DKK, SGD, HKD",
+            param: "currency",
+          },
+        },
+        422,
+      ),
+    );
+
+    // A currency from outside the typed list, as a caller with a plain
+    // string would send it.
+    const thrown = await peppol.documents
+      .send({ ...SEND_PARAMS, currency: "PLN" as "EUR" })
+      .catch((err: unknown) => err);
+
+    expect(thrown).toBeInstanceOf(PeppolValidationError);
+    expect((thrown as PeppolValidationError).status).toBe(422);
+    expect((thrown as PeppolValidationError).code).toBe("unsupported_currency");
+    expect((thrown as PeppolValidationError).param).toBe("currency");
   });
 });
 

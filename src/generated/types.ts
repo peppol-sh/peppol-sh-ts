@@ -660,6 +660,9 @@ export interface paths {
          *     An item whose sender in `from` is not the company gets an error
          *     object with the code `sender_not_registered` in the response array,
          *     as in `POST /v1/documents`. It does not cost a credit.
+         *
+         *     A `currency` that cannot be sent in one document refuses the whole
+         *     batch with a 422, before any charge.
          */
         post: operations["sendDocumentBatch"];
         delete?: never;
@@ -893,6 +896,10 @@ export interface paths {
          *     that is not the company gives `valid: false` and an entry in `errors`
          *     with `path` `from.peppol_id` or `from.tax_id` and `code`
          *     `sender_not_registered`.
+         *
+         *     A `currency` that `POST /v1/documents` refuses gives `valid: false`
+         *     and an entry in `errors` with `path` `currency` and `code`
+         *     `unsupported_currency` or `invalid_field`.
          */
         post: operations["validateDocument"];
         delete?: never;
@@ -1624,10 +1631,17 @@ export interface components {
             /** Format: date */
             due_date?: string;
             /**
-             * @description ISO 4217 currency code
+             * @description ISO 4217 currency code of the document. It must be one of the
+             *     listed codes. Letter case and spaces around the code are ignored;
+             *     the code is stored and sent in upper case (`eur` becomes `EUR`).
+             *     Any other value is refused with a 422 before the charge:
+             *     `unsupported_currency` for an ISO 4217 code that cannot be sent
+             *     (for example `PLN`), `invalid_field` for a value that is no
+             *     currency code. `param` is `currency`.
              * @default EUR
+             * @enum {string}
              */
-            currency: string;
+            currency: "EUR" | "USD" | "GBP" | "JPY" | "CHF" | "CAD" | "AUD" | "NZD" | "CNY" | "INR" | "SEK" | "NOK" | "DKK" | "SGD" | "HKD";
             from: components["schemas"]["Party"];
             to: components["schemas"]["RecipientParty"];
             lines: components["schemas"]["LineItem"][];
@@ -1973,6 +1987,10 @@ export interface components {
              *     that was recorded when it was created.
              */
             total?: number;
+            /**
+             * @description ISO 4217 currency code of the document, in upper case. A document
+             *     created before `currency` was checked can hold another value.
+             */
             currency?: string;
             /** Format: date */
             issue_date?: string;
@@ -2360,6 +2378,7 @@ export interface components {
          *     | validation_error | `amount_due_exceeds_total` | 422 — `amount_due` is more than the document total with VAT plus `rounding_amount`. |
          *     | validation_error | `amount_due_excludes_rounding` | 422 — `amount_due` equals the document total with VAT, but the document has a positive `rounding_amount`. |
          *     | validation_error | `rounding_amount_out_of_range` | 422 — `rounding_amount` is `1.00` or more either way, or takes the document total below `0`. |
+         *     | validation_error | `unsupported_currency` | 422 — `currency` of a document is an ISO 4217 code that cannot be sent. `param` is `currency` (`<index>.currency` in a batch). The message lists the accepted codes. A value that is no currency code gets `invalid_field`. |
          *     | validation_error | `batch_too_large` | Batch contains more than 100 documents. |
          *     | validation_error | `mixed_company_ids` | Batch mixes multiple `company_id`s. |
          *     | validation_error | `idempotency_key_mismatch` | The `Idempotency-Key` header and the `idempotency_key` body field carry different keys. |
@@ -4070,7 +4089,10 @@ export interface operations {
             /**
              * @description Payload validation failed. `sender_not_registered`: the sender in
              *     `from` is not the company of `company_id`; `param` is
-             *     `from.peppol_id` or `from.tax_id`.
+             *     `from.peppol_id` or `from.tax_id`. `unsupported_currency`:
+             *     `currency` is an ISO 4217 code that cannot be sent.
+             *     `invalid_field` with `param` `currency`: `currency` is no currency
+             *     code. No document is created and no credit is charged.
              */
             422: {
                 headers: {
@@ -4115,6 +4137,23 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             402: components["responses"]["PaymentRequired"];
+            /**
+             * @description A document has a value that cannot be sent. The whole batch is
+             *     refused: no document is created and no credit is charged. `param`
+             *     is the index of the document and the field, for example
+             *     `1.currency`. For `currency`, `code` is `unsupported_currency`
+             *     (an ISO 4217 code that cannot be sent) or `invalid_field` (no
+             *     currency code). The other codes are those of the 422 of
+             *     `POST /v1/documents` for `rounding_amount` and `amount_due`.
+             */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorObject"];
+                };
+            };
             429: components["responses"]["RateLimited"];
         };
     };

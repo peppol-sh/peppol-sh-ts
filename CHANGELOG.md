@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `currency` of a document must now be one of `EUR`, `USD`, `GBP`, `JPY`,
+  `CHF`, `CAD`, `AUD`, `NZD`, `CNY`, `INR`, `SEK`, `NOK`, `DKK`, `SGD`, `HKD`.
+  Before, the API took any string. `documents.send` throws
+  `PeppolValidationError` (status `422`) for another value: code
+  `unsupported_currency` for an ISO 4217 code that cannot be sent (for example
+  `PLN`), code `invalid_field` for a value that is no currency code. `param`
+  is `currency`. `documents.sendBatch` throws the same error for the whole
+  batch, with the index of the document in `param` (`1.currency`). No credit
+  is charged and no document is made. `validate.document` gives `valid: false`
+  with an entry in `errors` (`path` `currency`). The API ignores letter case
+  and spaces around the code, and stores and sends the code in upper case.
+  Left out, the currency is `EUR` as before. The type of `currency` in
+  `DocumentCreate` narrows from `string` to the union of these codes, so a
+  `string` variable needs a check or a cast. `Document.currency` in a response
+  stays `string`.
 - A document whose sender is not the company is now refused at once.
   `documents.send` throws `PeppolValidationError` (status `422`, code
   `sender_not_registered`, `param` `from.peppol_id` or `from.tax_id`) for a
