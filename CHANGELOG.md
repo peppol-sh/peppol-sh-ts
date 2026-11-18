@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The API now answers `400 invalid_body` (and not `500`) when the body is
+  not valid JSON or not a JSON object, on every route that reads a JSON
+  body. This includes `POST /v1/signup`, `webhooks.create`,
+  `account.createKey` and the workspace calls. The SDK always sends valid
+  JSON, so this is seen only by a caller that builds the request itself
+  (#568).
 - `currency` of a document must now be one of `EUR`, `USD`, `GBP`, `JPY`,
   `CHF`, `CAD`, `AUD`, `NZD`, `CNY`, `INR`, `SEK`, `NOK`, `DKK`, `SGD`, `HKD`.
   Before, the API took any string. `documents.send` throws

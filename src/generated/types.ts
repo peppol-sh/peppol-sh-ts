@@ -3105,7 +3105,13 @@ export interface operations {
                     "application/json": components["schemas"]["SignupResponse"];
                 };
             };
-            /** @description Invalid email */
+            /**
+             * @description The request could not be read. The error `type` is
+             *     `validation_error`, with `code` `invalid_body` (the body is not a
+             *     JSON object, for example because it is not valid JSON) or
+             *     `invalid_field` (`email` is not a valid email address, or `name`
+             *     is not a string).
+             */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3524,6 +3530,19 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["KycState"];
+                };
+            };
+            /**
+             * @description The request could not be read. The error `type` is
+             *     `validation_error`, with `code` `invalid_body` (the body is not a
+             *     JSON object, for example because it is not valid JSON).
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorObject"];
                 };
             };
             401: components["responses"]["Unauthenticated"];
@@ -4623,8 +4642,9 @@ export interface operations {
             };
             /**
              * @description The body is not a valid webhook. The error `type` is
-             *     `validation_error`, with `code` `missing_url`, `invalid_url`,
-             *     `missing_events`, or `invalid_event`.
+             *     `validation_error`, with `code` `invalid_body` (the body is not a
+             *     JSON object, for example because it is not valid JSON),
+             *     `missing_url`, `invalid_url`, `missing_events`, or `invalid_event`.
              */
             400: {
                 headers: {
