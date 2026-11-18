@@ -34,6 +34,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `account.createKey` and the workspace calls. The SDK always sends valid
   JSON, so this is seen only by a caller that builds the request itself
   (#568).
+- A document now goes out with a postal country for the sender and the
+  receiver when one can be derived. The country is `address.country`; when
+  that is left out or is no two-letter code, the prefix of the VAT number in `tax_id` (the Greek `EL` gives `GR`); else the
+  country of the `peppol_id` scheme (for example `0192` gives `NO`). A
+  scheme that is not of one country (`0088`, `0060`) gives none. Before, a
+  live document with no `address.country` went out with the country `BE`.
+  When no country follows for a party, `documents.send` throws
+  `PeppolValidationError` (status `422`, code `party_country_required`,
+  `param` `from.address.country` or `to.address.country`) for a `ps_test_`
+  key. No credit is charged and no document is made.
+  `documents.sendBatch` gives the error for that item in its result.
+  `validate.document` gives `valid: false` with an entry in `errors`
+  (`code` `party_country_required`, `path` the field). A `ps_live_` key
+  does not get the error yet: for a warning period the document is accepted
+  and goes out with the country `BE`, and `validate.document` gives the
+  entry in `warnings`. After that period a `ps_live_` key gets the same
+  `422`. Give `address.country` for both parties to be safe (#576).
 - `currency` of a document must now be one of `EUR`, `USD`, `GBP`, `JPY`,
   `CHF`, `CAD`, `AUD`, `NZD`, `CNY`, `INR`, `SEK`, `NOK`, `DKK`, `SGD`, `HKD`.
   Before, the API took any string. `documents.send` throws
