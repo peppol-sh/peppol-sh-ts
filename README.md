@@ -104,7 +104,9 @@ number in `sales_order` (BT-14). A party can have an `email` and a
 the number of the buyer in your system (BT-46). A party can also have a
 `phone` (BT-42 for `from`, BT-57 for `to`); it needs no email. When seller and
 buyer are both in Germany, Peppol requires `from.phone` together with
-`from.contact_name` and `from.email` (rule DE-R-006).
+`from.contact_name` and `from.email` (rule DE-R-006). When `from` leaves out
+`contact_name`, `email` or `phone`, the Invoice contact of the company
+(`invoice_contact`) fills it.
 
 For a bankgiro or plusgiro number, or for more than one account, use
 `payment_means.accounts`, with `method` `bank_transfer`. `iban` and `bic` are the older form of one IBAN
@@ -322,6 +324,28 @@ separators that its scheme does not have: `0208:0410086603`, not
 and names the clean value in the message. A Belgian company without a
 `peppol_id` gets `0208:` plus its `company_registration_id` without dots and
 spaces.
+
+A company can have an Invoice contact: the default for the seller contact of
+its documents. When a document is accepted, each of `from.contact_name`,
+`from.email` and `from.phone` that it leaves out gets the value of
+`invoice_contact`. A value of the document wins, per field. The name is filled
+in only when the party then has an email. The values are stored with the
+document, so a later change of the company does not change it. The company
+`email` is a different field and is never put on a document.
+
+```ts
+await peppol.companies.update("com_abc123", {
+  invoice_contact: {
+    name: "Erika Mustermann",
+    email: "rechnung@acme.example",
+    phone: "+49 30 1234567",
+  },
+});
+```
+
+On `update`, a field that is absent stays as it is, `null` for a field clears
+it, and `invoice_contact: null` clears the three fields. A company in a
+response always has `invoice_contact`; a field that is not set is `null`.
 
 A VAT scheme (`99xx`) takes the VAT number with its country prefix, in the
 national format and with its check digit: `9930:DE123456788`, not the register

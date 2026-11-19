@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-18
+
+### Added
+
+- A company has an Invoice contact: `invoice_contact` with `name`, `email`
+  and `phone`, on `companies.create` and `companies.update`. When a document
+  is accepted (`documents.send`, `documents.sendBatch`), each of
+  `from.contact_name`, `from.email` and `from.phone` that the document leaves
+  out gets the value of the company. A value of the document wins, per field.
+  The name is filled in only when the party then has an email. A document that
+  already has a contact name and leaves the email out is accepted when the
+  company supplies the email, and rejected with `invalid_document_body` on
+  `from.contact_name` when it does not.
+  `validate.document` uses the same defaults. Peppol requires the three fields
+  when seller and buyer are both in Germany (rules DE-R-005, DE-R-006,
+  DE-R-007): set them one time on the company. All three are optional. `name`
+  is trimmed and must then have 1 to 200 characters, `email` must be a valid
+  email address, `phone` is trimmed and must then have 1 to 100 characters
+  (the format is not checked). A refused value throws `PeppolValidationError`
+  (status `400`, code `invalid_field`, `param` for example
+  `invoice_contact.phone`). On `companies.update`, a field that is absent
+  stays as it is, `null` for a field clears it, and `invoice_contact: null`
+  clears the three fields. The company `email` is a different field and is
+  never put on a document (#573).
+- `Company`, `CompanyListItem` and `CompanyDetail` (from `companies.create`,
+  `companies.list`, `companies.get` and `companies.update`) always have
+  `invoice_contact`. A field that is not set is `null` (#573).
+- `Document` (from `documents.get`) shows the filled values on `from`. A later
+  change of the company does not change a document that is already accepted
+  (#573).
+
 ## [0.8.0] - 2026-11-18
 
 ### Added
@@ -324,6 +355,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `kyc` — `get`, `uploadDocument`, `submit`.
 
 [Unreleased]: https://github.com/peppol-sh/peppol-sh-ts/commits/main
+[0.9.0]: https://github.com/peppol-sh/peppol-sh-ts/releases/tag/v0.9.0
 [0.8.0]: https://github.com/peppol-sh/peppol-sh-ts/releases/tag/v0.8.0
 [0.7.0]: https://github.com/peppol-sh/peppol-sh-ts/releases/tag/v0.7.0
 [0.6.0]: https://github.com/peppol-sh/peppol-sh-ts/releases/tag/v0.6.0

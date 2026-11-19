@@ -145,6 +145,71 @@ describe("companies.update()", () => {
   });
 });
 
+describe("invoice contact (#573)", () => {
+  const INVOICE_CONTACT = {
+    name: "Erika Mustermann",
+    email: "rechnung@acme.example",
+    phone: "+49 30 1234567",
+  };
+
+  it("companies.create() sends invoice_contact and returns it", async () => {
+    const { fetch, peppol } = client(
+      jsonResponse({ ...COMPANY, invoice_contact: INVOICE_CONTACT }, 201),
+    );
+
+    const company = await peppol.companies.create({
+      name: "Acme GmbH",
+      country: "DE",
+      peppol_id: "9930:DE123456788",
+      invoice_contact: INVOICE_CONTACT,
+    });
+
+    const body = JSON.parse(fetch.calls[0].body as string);
+    expect(body.invoice_contact).toEqual(INVOICE_CONTACT);
+    expect(company.invoice_contact?.phone).toBe("+49 30 1234567");
+  });
+
+  it("companies.update() sends the changed fields; null clears a field", async () => {
+    const { fetch, peppol } = client(
+      jsonResponse({
+        ...COMPANY_DETAIL,
+        invoice_contact: { ...INVOICE_CONTACT, phone: null },
+      }),
+    );
+
+    const company = await peppol.companies.update("com_9fJ2kQ7bTx0Lm4Ne1Ry8", {
+      invoice_contact: { name: "Erika Mustermann", phone: null },
+    });
+
+    expect(fetch.calls[0].method).toBe("PATCH");
+    expect(fetch.calls[0].body).toBe(
+      '{"invoice_contact":{"name":"Erika Mustermann","phone":null}}',
+    );
+    expect(company.invoice_contact?.phone).toBeNull();
+    expect(company.invoice_contact?.email).toBe("rechnung@acme.example");
+  });
+
+  it("companies.update() with invoice_contact null clears the three fields", async () => {
+    const { fetch, peppol } = client(
+      jsonResponse({
+        ...COMPANY_DETAIL,
+        invoice_contact: { name: null, email: null, phone: null },
+      }),
+    );
+
+    const company = await peppol.companies.update("com_9fJ2kQ7bTx0Lm4Ne1Ry8", {
+      invoice_contact: null,
+    });
+
+    expect(fetch.calls[0].body).toBe('{"invoice_contact":null}');
+    expect(company.invoice_contact).toEqual({
+      name: null,
+      email: null,
+      phone: null,
+    });
+  });
+});
+
 describe("error pass-through", () => {
   it("throws the mapped API error instead of resolving", async () => {
     const { peppol } = client(

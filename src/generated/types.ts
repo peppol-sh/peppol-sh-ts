@@ -494,6 +494,11 @@ export interface paths {
          *     rejected with `invalid_country`. A missing `name` or `country` returns
          *     `missing_field`.
          *
+         *     **Invoice contact.** `invoice_contact` is the default for the seller
+         *     contact name, email and phone of the company's documents. A value
+         *     that is refused (a blank or too long name or phone, an email that is
+         *     not one) returns `invalid_field`.
+         *
          *     **Peppol ID.** Send `peppol_id`, except for a Belgian company with a
          *     `company_registration_id`: it defaults to `0208:<company_registration_id>`,
          *     without the dots and spaces of the registration number
@@ -584,6 +589,10 @@ export interface paths {
          * Update company
          * @description Update company details. Only **owners** and **admins** can update.
          *     Send only the fields you want to change.
+         *
+         *     In `invoice_contact`, a field that is absent stays as it is and
+         *     `null` clears it. A value that is refused returns `invalid_field`.
+         *     A change does not alter documents that are already accepted.
          */
         patch: operations["updateCompany"];
         trace?: never;
@@ -1322,6 +1331,7 @@ export interface components {
                 city?: string;
                 postal_code?: string;
             };
+            invoice_contact?: components["schemas"]["InvoiceContactInput"];
         };
         /**
          * @description Partial update — send only the fields you want to change.
@@ -1358,6 +1368,60 @@ export interface components {
                 city?: string;
                 postal_code?: string;
             };
+            invoice_contact?: components["schemas"]["InvoiceContactInput"];
+        };
+        /**
+         * @description The Invoice contact of the company: the default for the seller
+         *     contact of a document. When a document is accepted, each of
+         *     `from.contact_name`, `from.email` and `from.phone` that it leaves out
+         *     gets the value here; a value of the document wins, per field. The
+         *     result is stored with the document, so a later change here leaves
+         *     documents already accepted as they are. Peppol requires the three
+         *     fields when seller and buyer are both in Germany (DE-R-005, DE-R-006,
+         *     DE-R-007).
+         *
+         *     Optional. On `PATCH`, a field that is absent stays as it is, `null`
+         *     for a field clears it, and `null` for the object clears the three
+         *     fields. A refused value fails with `invalid_field` (400) and the
+         *     field in `param` (`invoice_contact.phone`).
+         *
+         *     It is separate from the company `email`, which is never put on a
+         *     document.
+         */
+        InvoiceContactInput: {
+            /**
+             * @description Default for `from.contact_name` (BT-41). It is trimmed and must
+             *     then have 1 to 200 characters. A contact name needs an email on
+             *     the same party, so it is filled in only when the document or the
+             *     Invoice contact has an email.
+             * @example Erika Mustermann
+             */
+            name?: string | null;
+            /**
+             * Format: email
+             * @description Default for `from.email` (BT-43). A valid email address.
+             * @example rechnung@example.de
+             */
+            email?: string | null;
+            /**
+             * @description Default for `from.phone` (BT-42). It is trimmed and must then have
+             *     1 to 100 characters. The format is not checked.
+             * @example +49 30 1234567
+             */
+            phone?: string | null;
+        } | null;
+        /**
+         * @description The Invoice contact of the company: the default for the seller
+         *     contact name, email and phone of a document that leaves them out. A
+         *     field that is not set is `null`.
+         */
+        InvoiceContact: {
+            /** @description Default for `from.contact_name` (BT-41). */
+            name: string | null;
+            /** @description Default for `from.email` (BT-43). */
+            email: string | null;
+            /** @description Default for `from.phone` (BT-42). */
+            phone: string | null;
         };
         /**
          * @description Company as returned by `POST /v1/companies`. This create shape carries
@@ -1400,6 +1464,7 @@ export interface components {
              *     given explicitly; null otherwise.
              */
             peppol_id?: string | null;
+            invoice_contact?: components["schemas"]["InvoiceContact"];
             /** Format: date-time */
             created_at?: string;
         };
@@ -1423,6 +1488,7 @@ export interface components {
             workspace_id?: string;
             /** Format: date-time */
             created_at?: string;
+            invoice_contact?: components["schemas"]["InvoiceContact"];
         };
         /**
          * @description Full company details from `GET /v1/companies/{id}` and
@@ -1453,6 +1519,7 @@ export interface components {
              *     owns and sends from.
              */
             peppol_id?: string | null;
+            invoice_contact?: components["schemas"]["InvoiceContact"];
             /**
              * @description Whether the company is live on the Peppol network — derived solely
              *     from whether its provider tenant has been provisioned.
@@ -1841,13 +1908,19 @@ export interface components {
             /**
              * Format: email
              * @description Contact email (BT-43 for `from`, BT-58 for `to`),
-             *     `cac:Contact/cbc:ElectronicMail`.
+             *     `cac:Contact/cbc:ElectronicMail`. On `from`: when absent, the
+             *     `invoice_contact.email` of the company fills it.
              */
             email?: string;
             /**
              * @description Contact name (BT-41 for `from`, BT-56 for `to`),
              *     `cac:Contact/cbc:Name`. Needs an `email` on the same party, else
-             *     the document is rejected with `invalid_document_body` (400).
+             *     the document is rejected with `invalid_document_body` (400). On
+             *     `from` that check runs after the Invoice contact is filled in, so
+             *     an email the document leaves out can come from
+             *     `invoice_contact.email`. When `contact_name` is absent, the
+             *     `invoice_contact.name` of the company fills it, if the party then
+             *     has an email.
              * @example Ann Peeters
              */
             contact_name?: string;
@@ -1858,6 +1931,8 @@ export interface components {
              *     with `invalid_document_body` (400). The format is not checked.
              *     On `from`: Required by Peppol when seller and buyer are both in
              *     Germany (DE-R-006), together with `contact_name` and `email`.
+             *     When absent on `from`, the `invoice_contact.phone` of the company
+             *     fills it.
              * @example +49 30 1234567
              */
             phone?: string;
