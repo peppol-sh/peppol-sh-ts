@@ -33,6 +33,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `de_domestic_fields_missing`, `path` the field), or one entry with `path`
   `buyer_reference` and `code` `buyer_reference_required` (#574).
 
+### Fixed
+
+- `events.list` can follow `next_cursor`. A `cursor` that is not unpadded
+  base64url, or whose decoded text has no newline, throws
+  `PeppolValidationError` (status `400`, code `invalid_cursor`, `param`
+  `cursor`). An empty `cursor` does too. Before, the next page and any
+  request with a `cursor` failed with `500` `internal_error` (#590).
+
 ## [0.9.0] - 2026-11-18
 
 ### Added

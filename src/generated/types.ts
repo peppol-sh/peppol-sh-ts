@@ -4531,7 +4531,7 @@ export interface operations {
                 document_id?: string;
                 /** @description Free-text search. Matches case-insensitively on document number or recipient name. */
                 q?: string;
-                /** @description Pagination cursor from previous response */
+                /** @description The `next_cursor` of the previous page. A cursor that is not unpadded base64url, or whose decoded text has no newline, gives a 400 `invalid_cursor`. */
                 cursor?: string;
                 /** @description Number of events per page */
                 limit?: number;
@@ -4555,6 +4555,7 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
         };
     };
     lookupParticipant: {
