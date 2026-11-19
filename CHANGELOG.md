@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- A German domestic document (seller and buyer both in Germany) is now
+  checked before the credit is charged, for `ps_test_` and `ps_live_` keys.
+  The country of a party is `address.country`, else the prefix of the VAT
+  number in `tax_id`, else the country of the `peppol_id` scheme. Peppol
+  requires `from.contact_name` (DE-R-005), `from.email` (DE-R-007),
+  `from.phone` (DE-R-006), `payment_means` (DE-R-001) and `buyer_reference`
+  (DE-R-015) on it. The `invoice_contact` of the company is filled in first,
+  so it satisfies the three `from` fields. When a field is missing,
+  `documents.send` throws `PeppolValidationError` (status `422`, code
+  `de_domestic_fields_missing`, `param` the first missing field). `details`
+  is `{ missing: [{ field, rule }] }`, for example
+  `{ field: 'from.phone', rule: 'DE-R-006' }`. No credit is charged and no
+  document is made. Before, the document was accepted, failed at the Peppol
+  network and the credit came back about a minute later (#574).
+- Any other document to a `0204` receiver (a German public body) now needs
+  `buyer_reference`, which holds the Leitweg-ID. Without it `documents.send`
+  throws `PeppolValidationError` (status `422`, code
+  `buyer_reference_required`, `param` `buyer_reference`) (#574).
+- For both codes, `documents.sendBatch` gives the error for that item in its
+  result and sends the other items. `validate.document` gives `valid: false`:
+  one entry in `errors` for each missing field (`code`
+  `de_domestic_fields_missing`, `path` the field), or one entry with `path`
+  `buyer_reference` and `code` `buyer_reference_required` (#574).
+
 ## [0.9.0] - 2026-11-18
 
 ### Added
