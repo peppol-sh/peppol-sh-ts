@@ -110,7 +110,12 @@ buyer are both in Germany, Peppol requires `from.phone` together with
 
 For a bankgiro or plusgiro number, or for more than one account, use
 `payment_means.accounts`, with `method` `bank_transfer`. `iban` and `bic` are the older form of one IBAN
-account: they give a 400 together with `accounts`. `rounding_amount` (BT-114)
+account: they give a 400 together with `accounts`. A `payment_means` needs
+an account number (`iban` or `accounts`, BR-61): when it has neither, the
+`iban` of the company fills `payment_means.iban` when that IBAN is valid
+(spaces and dashes are removed); without one the send fails
+with `PeppolValidationError` (status `422`, code `payment_account_required`) and no credit is
+charged. `rounding_amount` (BT-114)
 is the signed amount that rounds the amount due, for example to whole kronor.
 It is below `1.00` either way, and `total` does not include it. With an
 `amount_due`, send the rounded amount.

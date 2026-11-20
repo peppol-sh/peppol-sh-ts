@@ -642,6 +642,22 @@ export interface paths {
          *     `422` yet: for a warning period the document is accepted and goes
          *     out with the country `BE`. After that period it gets the same `422`.
          *
+         *     A `payment_means` must have an account number (BR-61, Payment
+         *     account identifier BT-84): `payment_means.iban` or
+         *     `payment_means.accounts`. When it has neither, `from` is the company
+         *     and the company `iban` is a valid IBAN once spaces and dashes are
+         *     removed, that compact IBAN fills `payment_means.iban` (a `bic`,
+         *     `method` and `reference` you send are kept). It is stored, so
+         *     `GET /v1/documents/{id}` and
+         *     the UBL show it. If `payment_means` still has no account number, the
+         *     response is a `422` with the code `payment_account_required` and
+         *     `param` `payment_means`, for every `method`. Both key modes get this
+         *     check, after the party country check and before the German checks
+         *     below. No credit is charged, no document is made. A document
+         *     without `payment_means` does not get it. Before, such a document got
+         *     a `202`, failed at the Peppol network and the credit came back about
+         *     a minute later.
+         *
          *     A German domestic document has a seller and a buyer that are both in
          *     Germany, by the country rule above. Peppol requires five fields on
          *     it: `from.contact_name` (DE-R-005), `from.email` (DE-R-007),
@@ -702,6 +718,12 @@ export interface paths {
          *     response array, as in `POST /v1/documents`: with a `ps_test_` key
          *     now, with a `ps_live_` key after the warning period. It does not
          *     cost a credit.
+         *
+         *     An item whose `payment_means` has no account number, after the
+         *     company IBAN fill, gets an error object with the code
+         *     `payment_account_required` in the response array, as in
+         *     `POST /v1/documents`, with both key modes. It does not cost a credit.
+         *     The other items go on.
          *
          *     A German domestic item without a field that Peppol requires gets an
          *     error object with the code `de_domestic_fields_missing` (with
@@ -957,6 +979,13 @@ export interface paths {
          *     `party_country_required`. A `ps_live_` key gets the result of the
          *     other checks and the same entry in `warnings`, until the warning
          *     period ends.
+         *
+         *     The account number of `payment_means` is checked as in
+         *     `POST /v1/documents`, for both key modes, after the company IBAN
+         *     fill. A `payment_means` with no `iban` and no `accounts` that the
+         *     company IBAN does not fill gives `valid: false` and an entry in
+         *     `errors` with `path` `payment_means` and `code`
+         *     `payment_account_required`.
          *
          *     The German required fields are checked as in `POST /v1/documents`,
          *     for both key modes. A German domestic document gives `valid: false`
@@ -1337,7 +1366,14 @@ export interface components {
              * @description Contact email for the company. Optional.
              */
             email?: string;
-            /** @description Bank account IBAN used as a payment default. Optional. */
+            /**
+             * @description Bank account IBAN of the company. Optional. A document
+             *     of this company with a `payment_means` that has no `iban` and no
+             *     `accounts` gets this IBAN in `payment_means.iban` when, with
+             *     spaces and dashes removed, it is a valid IBAN (15 to 34
+             *     characters, two letters, and the IBAN check digits). The compact
+             *     value is stored.
+             */
             iban?: string;
             /**
              * @description Peppol participant identifier in `scheme:id` form (e.g.
@@ -2059,6 +2095,18 @@ export interface components {
          *     more than one account. `iban` and `bic` are the older form of one
          *     `iban` account: they give a 400 together with `accounts`.
          *
+         *     An account number is required (BR-61, Payment account identifier
+         *     BT-84): `iban` or `accounts`, for every `method`. When both are
+         *     absent and `from` is the company of `company_id`, the `iban` of the
+         *     company fills `iban` when, with spaces and dashes removed, it is a
+         *     valid IBAN (15 to 34 characters, two letters, and the IBAN check
+         *     digits). The compact value is stored. A `bic`, `method` and
+         *     `reference` you send are kept, so `GET /v1/documents/{id}` and the
+         *     UBL show it. With no account number after that, the document is
+         *     rejected with `payment_account_required` (422, `param`
+         *     `payment_means`) before any charge. A document without
+         *     `payment_means` is not checked.
+         *
          *     Required by Peppol when seller and buyer are both in Germany
          *     (DE-R-001): without `payment_means` the document is rejected with
          *     `de_domestic_fields_missing` (422).
@@ -2085,6 +2133,11 @@ export interface components {
              * @enum {string}
              */
             method: "bank_transfer" | "card" | "direct_debit" | "other";
+            /**
+             * @description The IBAN to pay to (BT-84), the older form of one `iban` account.
+             *     When neither `iban` nor `accounts` is sent, the IBAN of the company
+             *     fills it (see above).
+             */
             iban?: string;
             bic?: string;
             /** @description Payment reference / structured communication */
@@ -2444,8 +2497,8 @@ export interface components {
              * @description Machine-readable issue code: the Peppol validation rule id (e.g.
              *     `BR-S-02`), our own code for a request body issue (e.g.
              *     `invalid_document_body`, `sender_not_registered`,
-             *     `party_country_required`, `de_domestic_fields_missing`,
-             *     `buyer_reference_required`), or
+             *     `party_country_required`, `payment_account_required`,
+             *     `de_domestic_fields_missing`, `buyer_reference_required`), or
              *     `invalid_document` when the provider rejects the document without
              *     a rule id.
              */
@@ -2550,6 +2603,7 @@ export interface components {
          *     | validation_error | `peppol_id_tax_id_mismatch` | 400 — a VAT-scheme Peppol ID is not the VAT number in the `tax_id` of the company. The message names the Peppol ID to use. |
          *     | validation_error | `sender_not_registered` | 422 — `POST /v1/documents`: the sender in `from` is not the company of `company_id`. `param` is `from.peppol_id` or `from.tax_id`. No `details`. Give the Peppol ID of the company or its own VAT number, or give neither. |
          *     | validation_error | `party_country_required` | 422 — `POST /v1/documents`: no postal country follows for the sender or the receiver. `param` is `from.address.country` or `to.address.country`. No `details`. Give `address.country`, a VAT number in `tax_id`, or a `peppol_id` of a scheme of one country. A `ps_test_` key gets it now; a `ps_live_` key gets it after a warning period. |
+         *     | validation_error | `payment_account_required` | 422 — `POST /v1/documents`: `payment_means` has no account number (no `iban`, no `accounts`), and Peppol requires one (BR-61, Payment account identifier BT-84), for every `method`. `param` is `payment_means`. No `details`. The IBAN of the company fills `payment_means.iban` first when `from` is the company and the compact IBAN (spaces and dashes removed) is a valid IBAN. Add `payment_means.iban` or `payment_means.accounts`, or set the `iban` of the company. A document without `payment_means` does not get it. |
          *     | validation_error | `de_domestic_fields_missing` | 422 — `POST /v1/documents`: seller and buyer are both in Germany and a field that Peppol requires is missing: `from.contact_name` (DE-R-005), `from.email` (DE-R-007), `from.phone` (DE-R-006), `payment_means` (DE-R-001), `buyer_reference` (DE-R-015). `param` is the first missing field. `details.missing` lists each one as `{ field, rule }`. The `invoice_contact` of the company fills the three `from` fields. |
          *     | validation_error | `buyer_reference_required` | 422 — `POST /v1/documents`: the receiver is a German public body (a `0204` Peppol ID) and `buyer_reference` is missing. `param` is `buyer_reference`. No `details`. Put the Leitweg-ID of the receiver in `buyer_reference`. A German domestic document gets `de_domestic_fields_missing` instead. |
          *     | validation_error | `invalid_scheme` | Peppol scheme (EAS) is unknown. |
@@ -4297,6 +4351,9 @@ export interface operations {
              *     sender or the receiver; `param` is `from.address.country` or
              *     `to.address.country`. Only a `ps_test_` key gets it for now; a
              *     `ps_live_` key gets it after the warning period.
+             *     `payment_account_required`: `payment_means` has no account number
+             *     (no `iban`, no `accounts`) and the company IBAN did not fill one;
+             *     `param` is `payment_means`.
              *     `de_domestic_fields_missing`: seller and buyer are both in
              *     Germany and a field that Peppol requires is missing; `param` is
              *     the first missing field. `details` is

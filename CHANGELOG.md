@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- A `payment_means` without an account number (no `iban`, no `accounts`)
+  now gets the IBAN of the company in `payment_means.iban`, when `from` is the
+  company and, with spaces and dashes removed, its `iban` is a valid IBAN.
+  A `bic`, `method` and `reference`
+  you send are kept. The filled value is stored, so `documents.get` and
+  `documents.ubl` show it (#595).
+- A `payment_means` that still has no account number is now refused before
+  the credit is charged, for every `method` and for `ps_test_` and
+  `ps_live_` keys: `documents.send` throws `PeppolValidationError` (status
+  `422`, code `payment_account_required`, `param` `payment_means`). Peppol
+  requires the account number (BR-61, Payment account identifier BT-84). No
+  credit is charged and no document is made. Before, the document was
+  accepted, failed at the Peppol network and the credit came back later.
+  `documents.sendBatch` gives the error for that item and sends the other
+  items. `validate.document` gives `valid: false` with one entry in `errors`
+  (`path` `payment_means`, `code` `payment_account_required`). A document
+  without `payment_means` is not checked (#595).
 - A German domestic document (seller and buyer both in Germany) is now
   checked before the credit is charged, for `ps_test_` and `ps_live_` keys.
   The country of a party is `address.country`, else the prefix of the VAT
