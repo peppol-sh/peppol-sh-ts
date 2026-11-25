@@ -1972,7 +1972,10 @@ export interface components {
              *     A `tax_id` with a country prefix (`BE…`, `NL…B01`, `ATU…`) is sent
              *     as the VAT number. A `tax_id` with no country prefix (for example
              *     the Norwegian org number `995313863`) is not a VAT number: it is
-             *     not sent as one, and the party then needs a `peppol_id`. For
+             *     not sent as one, and the party then needs a `peppol_id`. For a
+             *     Danish seller (`from.tax_id` `DK` + 8 digits), the CVR in the VAT
+             *     number is also sent as the legal registration ID (BT-30, scheme
+             *     `0184`). For
              *     `from`, the Peppol ID of the company is used when `peppol_id` is
              *     absent. If no Peppol ID can be found, the send fails with
              *     `sender_not_derivable`. For `from`, a VAT number or a `scheme:id`
